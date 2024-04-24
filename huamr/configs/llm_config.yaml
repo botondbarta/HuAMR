@@ -1,0 +1,44 @@
+# model
+model_name: meta-llama/Meta-Llama-3-8B-Instruct
+quantize: 4bit
+
+# dataset
+data_path: /path/file
+
+# training
+num_train_epochs: 1
+output_dir: /path
+
+learning_rate: 0.0005
+weight_decay: 0.01
+logging_steps: 10
+eval_steps: 10
+save_steps: 10 # same as eval_steps
+warmup_ratio: 0.03
+max_grad_norm: 0.3
+save_total_limit: 1
+batch_size: 4
+gradient_accumulation_steps: 4
+group_by_length: True
+
+# lora
+lora_rank: 16
+lora_alpha: 32
+lora_dropout: 0.05
+
+
+max_seq_length: 8192
+patience: 20
+
+
+# -----------
+
+# predict
+prediction_file: None
+max_predict_length: 128
+num_beams: 5
+length_penalty: 2
+no_repeat_ngram_size: 2
+encoder_no_repeat_ngram_size: 3
+generate_early_stopping: True
+

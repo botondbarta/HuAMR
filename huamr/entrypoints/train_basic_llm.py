@@ -129,7 +129,7 @@ def get_training_arg(config):
 def main(config_path):
     config = get_config_from_yaml(config_path)
 
-    model, tokenizer = load_model_and_tokenizer(config.model_name)
+    model, tokenizer = load_model_and_tokenizer(config.model_name, config.quantize)
 
     peft_config = LoraConfig(
         r=config.lora_rank,

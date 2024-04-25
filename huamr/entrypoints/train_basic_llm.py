@@ -15,6 +15,7 @@ from transformers import (
 
 from trl import SFTTrainer
 
+from huamr.data.amr3 import AMR3Dataset
 from huamr.utils.config_reader import get_config_from_yaml
 from huamr.data.le_petit_prince import LePetitPrinceDataset
 
@@ -62,7 +63,7 @@ def load_model_and_tokenizer(model_name, quantize):
 
 
 def load_dataset(config, eos_token):
-    dataset = LePetitPrinceDataset(config.data_path)
+    dataset = AMR3Dataset(config.data_path)
     train, validation, test = dataset.get_split()
     dataset = DatasetDict({
         'train': Dataset.from_pandas(pd.DataFrame(train)),

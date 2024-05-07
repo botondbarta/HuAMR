@@ -44,7 +44,7 @@ def get_bits_and_bytes_config(quantize):
 def load_model_and_tokenizer(model_name, quantize):
     tokenizer = AutoTokenizer.from_pretrained(model_name, use_fast=True, add_eos_token=True, token=HF_TOKEN)
     tokenizer.pad_token = tokenizer.eos_token
-    tokenizer.padding_side = 'left'
+    # tokenizer.padding_side = 'left'
 
     bnb_config = get_bits_and_bytes_config(quantize)
 
@@ -54,7 +54,7 @@ def load_model_and_tokenizer(model_name, quantize):
                                                  token=HF_TOKEN)
 
     # https://docs.nvidia.com/deeplearning/performance/dl-performance-matrix-multiplication/index.html#requirements-tc
-    model.resize_token_embeddings(len(tokenizer), pad_to_multiple_of=16)
+    # model.resize_token_embeddings(len(tokenizer), pad_to_multiple_of=16)
     model.config.pad_token_id = tokenizer.pad_token_id
     model.config.use_cache = False  # Gradient checkpointing is used by default but not compatible with caching
 
@@ -71,8 +71,7 @@ def load_dataset(config, eos_token):
         'test': Dataset.from_pandas(pd.DataFrame(test)),
     })
 
-
-    prompt = """### Instruction: Generate an AMR Graph from the following sentence.
+    prompt = """### Instruction: Provide the AMR graph for the following sentence. Ensure that the graph captures the main concepts, the relationships between them, and any additional information that is important for understanding the meaning of the sentence. Use standard AMR notation, including concepts, roles, and relationships.
 
     ### Sentence: {}
 

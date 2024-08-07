@@ -59,7 +59,6 @@ setup(
         'setuptools==68.2.2',
         'sympy==1.12',
         'tokenizers==0.19.1',
-        'torch==2.3.0+cu118',
         'tqdm==4.66.2',
         'transformers==4.40.1',
         'trl==0.8.6',

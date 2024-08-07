@@ -18,6 +18,7 @@ from trl import SFTTrainer
 from huamr.data.amr3 import AMR3Dataset
 from huamr.utils.config_reader import get_config_from_yaml
 from huamr.data.le_petit_prince import LePetitPrinceDataset
+from huamr.utils.langtype import LangType
 
 HF_TOKEN = os.getenv('HF_TOKEN')
 
@@ -63,7 +64,7 @@ def load_model_and_tokenizer(model_name, quantize):
 
 
 def load_dataset(config, eos_token):
-    dataset = AMR3Dataset(config.data_path)
+    dataset = AMR3Dataset(config.data_path, LangType[config.language], config.remove_wiki)
     train, validation, test = dataset.get_split()
     dataset = DatasetDict({
         'train': Dataset.from_pandas(pd.DataFrame(train)),
@@ -71,12 +72,14 @@ def load_dataset(config, eos_token):
         'test': Dataset.from_pandas(pd.DataFrame(test)),
     })
 
-    prompt = """### Instruction: Provide the AMR graph for the following sentence. Ensure that the graph captures the main concepts, the relationships between them, and any additional information that is important for understanding the meaning of the sentence. Use standard AMR notation, including concepts, roles, and relationships.
+    prompt = """### Instruction
+Provide the AMR graph for the following sentence. Ensure that the graph captures the main concepts, the relationships between them, and any additional information that is important for understanding the meaning of the sentence. Use standard AMR notation, including concepts, roles, and relationships.
 
-    ### Sentence: {}
+### Sentence
+{}
 
-    ### AMR Graph:
-    {}"""
+### AMR Graph
+{}"""
 
     def formatting_prompts_func(examples):
         sentences = examples["sentence"]

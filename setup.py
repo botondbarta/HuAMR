@@ -44,6 +44,7 @@ setup(
         'nvidia-nvtx-cu11==11.8.86',
         'packaging==24.0',
         'peft==0.10.0',
+        'penman==1.3.0',
         'psutil==5.9.8',
         'pyarrow==16.0.0',
         'pyarrow-hotfix==0.6',

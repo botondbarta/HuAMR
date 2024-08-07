@@ -1,25 +1,52 @@
+import copy
 import os
+import re
 
 import pandas as pd
+import penman
+
+from huamr.utils.langtype import LangType
 
 
 class AMR3Dataset:
-    def __init__(self, folder_path):
+    def __init__(self,
+                 folder_path,
+                 lang_type: LangType = LangType.HU,
+                 remove_wiki: bool = True):
         self.folder_path = folder_path
-        self.data = self._load_data(folder_path)
+        self.data = self._load_data(folder_path, lang_type, remove_wiki)
 
-    def _load_data(self, folder_path):
+    def _load_data(self,
+                   folder_path,
+                   lang_type: LangType,
+                   remove_wiki: bool = True):
         translations = self._load_translations(folder_path, 'translation')
         all_data_df = self._load_all_annotated_data(folder_path)
 
         df = pd.merge(all_data_df, translations, on='id', how='left')
+        df['lang'].fillna(LangType.EN.value, inplace=True)
 
-        df_sentence = df[['id', 'sentence', 'amr_graph', 'split']].copy()
-        df_hu_sentence = df[['id', 'hu_sentence', 'amr_graph', 'split']].copy()
+        df_sentence = df[['id', 'sentence', 'amr_graph', 'split', 'lang']].copy()
+        df_hu_sentence = df[['id', 'hu_sentence', 'amr_graph', 'split', 'lang']].copy()
         df_hu_sentence = df_hu_sentence.rename(columns={'hu_sentence': 'sentence'})
         df_hu_sentence = df_hu_sentence.dropna(subset=['sentence'])
 
-        return pd.concat([df_sentence, df_hu_sentence], ignore_index=True)
+        df = pd.concat([df_sentence, df_hu_sentence], ignore_index=True)
+
+        df = self._keep_specified_language(df, lang_type)
+        df = df.drop_duplicates(subset='sentence')
+
+        # df['penman_graph'] = df['amr_graph'].apply(penman.decode)
+        # if remove_wiki:
+        #     df['penman_graph'] = df['penman_graph'].apply(self.remove_wiki_from_graph)
+        # df['linearized'] = df['penman_graph'].apply(self._linearize)
+
+        return df[['id', 'sentence', 'amr_graph', 'split']]
+
+    def _keep_specified_language(self, df, lang_type: LangType) -> pd.DataFrame:
+        if lang_type == LangType.ALL.value:
+            return df
+        return df[df['lang'] == lang_type.value]
 
     def _load_all_annotated_data(self, folder_path):
         train = self._load_data_from_folder(folder_path, 'training')
@@ -70,7 +97,7 @@ class AMR3Dataset:
 
         return pd.DataFrame(amr_models)
 
-    def _load_translations(self, folder_path, translation_folder):
+    def _load_translations(self, folder_path, translation_folder) -> pd.DataFrame:
         folder_path = os.path.join(folder_path, translation_folder)
 
         translations = []
@@ -81,7 +108,79 @@ class AMR3Dataset:
         df = pd.concat(translations, ignore_index=True)
 
         df.drop('sentence', axis=1, inplace=True)
+        df['lang'] = LangType.HU.value
         return df
+
+    def remove_wiki_from_graph(self, graph: penman.Graph) -> penman.Graph:
+        # https://github.com/BramVanroy/multilingual-text-to-amr/blob/efc1f7249bda34cd01dbe3ced2deaa5edeff84b8/src/multi_amr/utils/__init__.py#L79
+        # modified from SPRING
+        triples = []
+        for t in graph.triples:
+            v1, rel, v2 = t
+            if rel == ":wiki":
+                t = penman.Triple(v1, rel, "+")
+            triples.append(t)
+
+        return penman.Graph(triples, metadata=graph.metadata)
+
+    def _linearize(self, graph: penman.Graph) -> list[str]:
+        # https://github.com/BramVanroy/multilingual-text-to-amr/blob/main/src/multi_amr/tokenization.py#L329
+        # modified from SPRING
+        graph_ = copy.deepcopy(graph)
+        graph_.metadata = {}
+        try:
+            linearized = penman.encode(graph_).replace("–", "-")  # NLLB does not have an en-hyphen
+        except Exception as exc:
+            print(graph_)
+            print(graph_.metadata)
+            raise exc
+
+        linearized_nodes = self._tokenize_encoded_graph(linearized)
+        remap = {}
+        for i in range(1, len(linearized_nodes)):
+            nxt = linearized_nodes[i]
+            lst = linearized_nodes[i - 1]
+            if nxt == "/":
+                remap[lst] = f"<pointer:{len(remap)}>"
+
+        i = 1
+        linearized_nodes_ = [linearized_nodes[0]]
+        while i < (len(linearized_nodes)):
+            nxt = linearized_nodes[i]
+            lst = linearized_nodes_[-1]
+            if nxt in remap:
+                if lst == "(" and linearized_nodes[i + 1] == "/":
+                    nxt = remap[nxt]
+                    i += 1
+                elif lst.startswith(":"):
+                    nxt = remap[nxt]
+            elif lst == ":polarity" and nxt == "-":
+                linearized_nodes_[-1] = ":negation"
+                i += 1
+                continue
+            linearized_nodes_.append(nxt)
+            i += 1
+
+        linearized_nodes_ = [tstrip for t in linearized_nodes_ if (tstrip := t.strip())]
+        return linearized_nodes_
+
+    def _tokenize_encoded_graph(self, linearized: str) -> list[str]:
+        # https://github.com/BramVanroy/multilingual-text-to-amr/blob/main/src/multi_amr/tokenization.py#L370
+        # modified from SPRING
+        linearized = re.sub(r"(\".+?\")", r" \1 ", linearized)
+        pieces = []
+        for piece in linearized.split():
+            if piece.startswith('"') and piece.endswith('"'):
+                pieces.append(piece)
+            else:
+                piece = piece.replace("(", " ( ")
+                piece = piece.replace(")", " ) ")
+                piece = piece.replace(":", " :")
+                piece = piece.replace("/", " / ")
+                piece = piece.strip()
+                pieces.append(piece)
+        linearized = re.sub(r"\s+", " ", " ".join(pieces)).strip()
+        return linearized.split(" ")
 
     def get_split(self):
         train = self.data[self.data['split'] == 'training'].to_dict(orient='records')

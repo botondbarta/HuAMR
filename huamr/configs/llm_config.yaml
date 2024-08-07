@@ -4,6 +4,8 @@ quantize: 4bit
 
 # dataset
 data_path: /path/file
+remove_wiki: True
+language: HU
 
 # training
 num_train_epochs: 1

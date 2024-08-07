@@ -5,6 +5,7 @@ import re
 import pandas as pd
 import penman
 
+from huamr.utils.config_reader import get_config_from_yaml
 from huamr.utils.langtype import LangType
 
 
@@ -24,14 +25,16 @@ class AMR3Dataset:
         all_data_df = self._load_all_annotated_data(folder_path)
 
         df = pd.merge(all_data_df, translations, on='id', how='left')
-        df['lang'].fillna(LangType.EN.value, inplace=True)
 
-        df_sentence = df[['id', 'sentence', 'amr_graph', 'split', 'lang']].copy()
-        df_hu_sentence = df[['id', 'hu_sentence', 'amr_graph', 'split', 'lang']].copy()
+        df_en_sentence = df[['id', 'sentence', 'amr_graph', 'split']].copy()
+        df_hu_sentence = df[['id', 'hu_sentence', 'amr_graph', 'split']].copy()
         df_hu_sentence = df_hu_sentence.rename(columns={'hu_sentence': 'sentence'})
         df_hu_sentence = df_hu_sentence.dropna(subset=['sentence'])
 
-        df = pd.concat([df_sentence, df_hu_sentence], ignore_index=True)
+        df_en_sentence['lang'] = LangType.EN.value
+        df_hu_sentence['lang'] = LangType.HU.value
+
+        df = pd.concat([df_en_sentence, df_hu_sentence], ignore_index=True)
 
         df = self._keep_specified_language(df, lang_type)
         df = df.drop_duplicates(subset='sentence')
@@ -44,7 +47,7 @@ class AMR3Dataset:
         return df[['id', 'sentence', 'amr_graph', 'split']]
 
     def _keep_specified_language(self, df, lang_type: LangType) -> pd.DataFrame:
-        if lang_type == LangType.ALL.value:
+        if lang_type == LangType.ALL:
             return df
         return df[df['lang'] == lang_type.value]
 
@@ -108,7 +111,6 @@ class AMR3Dataset:
         df = pd.concat(translations, ignore_index=True)
 
         df.drop('sentence', axis=1, inplace=True)
-        df['lang'] = LangType.HU.value
         return df
 
     def remove_wiki_from_graph(self, graph: penman.Graph) -> penman.Graph:
@@ -188,3 +190,8 @@ class AMR3Dataset:
         test = self.data[self.data['split'] == 'test'].to_dict(orient='records')
 
         return train, dev, test
+
+
+if __name__ == '__main__':
+    config = get_config_from_yaml('/home/bart/projects/HuAMR/huamr/configs/llm_config.yaml')
+    dataset = AMR3Dataset('/home/bart/data/amr/amr_annotation_3.0/data/amrs/split', LangType[config.language])

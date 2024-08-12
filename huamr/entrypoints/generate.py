@@ -58,7 +58,7 @@ def main(config_path, adapter_path, output_path):
     model.eval()
 
     test_set = load_dataset(config.data_path)
-    test_set['generated_amr'] = test_set['sentence'].progress_apply(lambda x: inference(model, tokenizer, x), axis=1)
+    test_set['generated_amr'] = test_set['sentence'].progress_apply(lambda x: inference(model, tokenizer, x))
 
     test_set.to_csv(os.path.join(output_path, 'generated.csv'), header=True, index=False)
 

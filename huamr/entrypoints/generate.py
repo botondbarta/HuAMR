@@ -37,7 +37,8 @@ Provide the AMR graph for the following sentence. Ensure that the graph captures
         max_new_tokens=max_new_tokens,
     )
     outputs = model.generate(**inputs, generation_config=generation_config)
-    return tokenizer.decode(outputs.sequences[0], skip_special_tokens=True, clean_up_tokenization_spaces=True)
+    output = tokenizer.decode(outputs.sequences[0], skip_special_tokens=True, clean_up_tokenization_spaces=True)
+    return output.split('### AMR Graph')[1].strip()
 
 
 def load_dataset(dataset_path):

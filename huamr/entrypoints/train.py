@@ -3,62 +3,20 @@ import os
 import click
 import pandas as pd
 from datasets import DatasetDict, Dataset
-from peft import LoraConfig, prepare_model_for_kbit_training
+from peft import LoraConfig
 from transformers import (
-    AutoModelForCausalLM,
-    AutoTokenizer,
-    BitsAndBytesConfig,
-    AutoTokenizer,
     TrainingArguments,
-    GenerationConfig, IntervalStrategy, EarlyStoppingCallback
+    IntervalStrategy,
+    EarlyStoppingCallback,
 )
-
 from trl import SFTTrainer
 
 from huamr.data.amr3 import AMR3Dataset
 from huamr.utils.config_reader import get_config_from_yaml
-from huamr.data.le_petit_prince import LePetitPrinceDataset
 from huamr.utils.langtype import LangType
+from huamr.utils.model_factory import ModelFactory
 
 HF_TOKEN = os.getenv('HF_TOKEN')
-
-
-def get_bits_and_bytes_config(quantize):
-    if quantize == '4bit':
-        return BitsAndBytesConfig(
-            load_in_4bit=True,
-            bnb_4bit_quant_type="nf4",
-            bnb_4bit_compute_dtype="bfloat16",
-            bnb_4bit_use_double_quant=True,
-        )
-    elif quantize == '8bit':
-        return BitsAndBytesConfig(
-            load_in_8bit=True,
-        )
-    else:
-        raise ValueError(f"Invalid quantization type: {quantize}")
-
-
-def load_model_and_tokenizer(model_name, quantize):
-    tokenizer = AutoTokenizer.from_pretrained(model_name, use_fast=True, token=HF_TOKEN)
-    tokenizer.pad_token = '<|finetune_right_pad_id|>'
-    tokenizer.eos_token = '<|eot_id|>'
-    tokenizer.bos_token = '<|begin_of_text|>'
-    tokenizer.padding_side = 'left'
-
-    bnb_config = get_bits_and_bytes_config(quantize)
-
-    model = AutoModelForCausalLM.from_pretrained(model_name,
-                                                 quantization_config=bnb_config,
-                                                 device_map='auto',
-                                                 token=HF_TOKEN)
-
-    # model.resize_token_embeddings(len(tokenizer), pad_to_multiple_of=16)
-    model.config.pad_token_id = tokenizer.pad_token_id
-    model.config.use_cache = False  # Gradient checkpointing is used by default but not compatible with caching
-
-    model = prepare_model_for_kbit_training(model)
-    return model, tokenizer
 
 
 def load_dataset(config, eos_token):
@@ -130,7 +88,7 @@ def get_training_arg(config):
 def main(config_path):
     config = get_config_from_yaml(config_path)
 
-    model, tokenizer = load_model_and_tokenizer(config.model_name, config.quantize)
+    model, tokenizer = ModelFactory.get_model(config.model_name, config.quantize, HF_TOKEN)
 
     peft_config = LoraConfig(
         r=config.lora_rank,

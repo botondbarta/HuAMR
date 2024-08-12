@@ -34,9 +34,6 @@ def get_bits_and_bytes_config(quantize):
     elif quantize == '8bit':
         return BitsAndBytesConfig(
             load_in_8bit=True,
-            bnb_8bit_quant_type="nf4",
-            bnb_8bit_compute_dtype="bfloat16",
-            bnb_8bit_use_double_quant=True,
         )
     else:
         raise ValueError(f"Invalid quantization type: {quantize}")

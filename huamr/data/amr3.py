@@ -190,8 +190,3 @@ class AMR3Dataset:
         test = self.data[self.data['split'] == 'test'].to_dict(orient='records')
 
         return train, dev, test
-
-
-if __name__ == '__main__':
-    config = get_config_from_yaml('/home/bart/projects/HuAMR/huamr/configs/llm_config.yaml')
-    dataset = AMR3Dataset('/home/bart/data/amr/amr_annotation_3.0/data/amrs/split', LangType[config.language])

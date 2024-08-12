@@ -43,9 +43,11 @@ def get_bits_and_bytes_config(quantize):
 
 
 def load_model_and_tokenizer(model_name, quantize):
-    tokenizer = AutoTokenizer.from_pretrained(model_name, use_fast=True, add_eos_token=True, token=HF_TOKEN)
-    tokenizer.pad_token = tokenizer.eos_token
-    # tokenizer.padding_side = 'left'
+    tokenizer = AutoTokenizer.from_pretrained(model_name, use_fast=True, token=HF_TOKEN)
+    tokenizer.pad_token = '<|finetune_right_pad_id|>'
+    tokenizer.eos_token = '<|eot_id|>'
+    tokenizer.bos_token = '<|begin_of_text|>'
+    tokenizer.padding_side = 'left'
 
     bnb_config = get_bits_and_bytes_config(quantize)
 
@@ -54,7 +56,6 @@ def load_model_and_tokenizer(model_name, quantize):
                                                  device_map='auto',
                                                  token=HF_TOKEN)
 
-    # https://docs.nvidia.com/deeplearning/performance/dl-performance-matrix-multiplication/index.html#requirements-tc
     # model.resize_token_embeddings(len(tokenizer), pad_to_multiple_of=16)
     model.config.pad_token_id = tokenizer.pad_token_id
     model.config.use_cache = False  # Gradient checkpointing is used by default but not compatible with caching

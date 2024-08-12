@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 
 import click
+import pandas as pd
 from peft import PeftModel
 from tqdm import tqdm
 from transformers import GenerationConfig
@@ -41,7 +42,7 @@ Provide the AMR graph for the following sentence. Ensure that the graph captures
 def load_dataset(dataset_path):
     dataset = AMR3Dataset(dataset_path, LangType['HU'])
     _, _, test_set = dataset.get_split()
-    return test_set
+    return pd.DataFrame(test_set)
 
 
 @click.command()

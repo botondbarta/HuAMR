@@ -33,6 +33,7 @@ Provide the AMR graph for the following sentence. Ensure that the graph captures
         temperature=temperature,
         return_dict_in_generate=True,
         eos_token_id=tokenizer.eos_token_id,
+        pad_token_id=tokenizer.pad_token_id,
         max_new_tokens=max_new_tokens,
     )
     outputs = model.generate(**inputs, generation_config=generation_config)

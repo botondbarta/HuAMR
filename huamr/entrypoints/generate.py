@@ -12,7 +12,6 @@ from huamr.utils.config_reader import get_config_from_yaml
 from huamr.utils.langtype import LangType
 from huamr.utils.model_factory import ModelFactory
 
-tqdm.pandas()
 HF_TOKEN = os.getenv('HF_TOKEN')
 
 
@@ -42,7 +41,7 @@ Provide the AMR graph for the following sentence. Ensure that the graph captures
 
 def batch_inference(model, tokenizer, sentences, batch_size=32):
     all_outputs = []
-    for i in range(0, len(sentences), batch_size):
+    for i in tqdm(range(0, len(sentences), batch_size)):
         batch = sentences[i:i + batch_size]
         outputs = inference(model, tokenizer, batch)
         all_outputs.extend(outputs)

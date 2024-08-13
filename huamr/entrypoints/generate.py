@@ -16,16 +16,16 @@ tqdm.pandas()
 HF_TOKEN = os.getenv('HF_TOKEN')
 
 
-def inference(model, tokenizer, sentence, max_new_tokens=1024, temperature=0.1, num_beams=5):
-    prompt = f"""### Instruction
+def inference(model, tokenizer, sentences, max_new_tokens=1024, temperature=0.1, num_beams=5):
+    prompts = [f"""### Instruction
 Provide the AMR graph for the following sentence. Ensure that the graph captures the main concepts, the relationships between them, and any additional information that is important for understanding the meaning of the sentence. Use standard AMR notation, including concepts, roles, and relationships.
 
 ### Sentence
 {sentence}
 
 ### AMR Graph
-"""
-    inputs = tokenizer(prompt, return_tensors="pt").to("cuda")
+""" for sentence in sentences]
+    inputs = tokenizer(prompts, padding=True, return_tensors="pt").to("cuda")
 
     generation_config = GenerationConfig(
         do_sample=True,
@@ -37,8 +37,16 @@ Provide the AMR graph for the following sentence. Ensure that the graph captures
         max_new_tokens=max_new_tokens,
     )
     outputs = model.generate(**inputs, generation_config=generation_config)
-    output = tokenizer.decode(outputs.sequences[0], skip_special_tokens=True, clean_up_tokenization_spaces=True)
-    return output.split('### AMR Graph')[1].strip()
+    return tokenizer.batch_decode(outputs.sequences, skip_special_tokens=True, clean_up_tokenization_spaces=True)
+
+
+def batch_inference(model, tokenizer, sentences, batch_size=32):
+    all_outputs = []
+    for i in range(0, len(sentences), batch_size):
+        batch = sentences[i:i + batch_size]
+        outputs = inference(model, tokenizer, batch)
+        all_outputs.extend(outputs)
+    return all_outputs
 
 
 def load_dataset(dataset_path):
@@ -50,8 +58,9 @@ def load_dataset(dataset_path):
 @click.command()
 @click.argument('config_path')
 @click.argument('adapter_path')
+@click.argument('batch_size')
 @click.argument('output_path')
-def main(config_path, adapter_path, output_path):
+def main(config_path, adapter_path, batch_size, output_path):
     config = get_config_from_yaml(config_path)
     adapter = Path(adapter_path)
 
@@ -60,7 +69,10 @@ def main(config_path, adapter_path, output_path):
     model.eval()
 
     test_set = load_dataset(config.data_path)
-    test_set['generated_amr'] = test_set['sentence'].progress_apply(lambda x: inference(model, tokenizer, x))
+
+    sentences = test_set['sentence'].tolist()
+    generated_outputs = batch_inference(model, tokenizer, sentences, batch_size)
+    test_set['generated_amr'] = [output.split('### AMR Graph')[-1].strip() for output in generated_outputs]
 
     test_set.to_csv(os.path.join(output_path, 'generated.csv'), header=True, index=False)
 

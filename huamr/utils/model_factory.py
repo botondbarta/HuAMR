@@ -17,12 +17,11 @@ class ModelFactory:
             tokenizer.pad_token = '<|finetune_right_pad_id|>'
             tokenizer.eos_token = '<|eot_id|>'
             tokenizer.bos_token = '<|begin_of_text|>'
-            model.config.pad_token_id = tokenizer.pad_token_id
-            model.config.use_cache = False
         if 'mistral-7b-instruct-v0.3' in model_name.lower():
             tokenizer.pad_token = '[control_768]'
-            model.config.pad_token_id = tokenizer.pad_token_id
-            model.config.use_cache = False
 
+        model.config.pad_token_id = tokenizer.pad_token_id
+        model.config.use_cache = False
+        
         model = prepare_model_for_kbit_training(model)
         return model, tokenizer

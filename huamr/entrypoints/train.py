@@ -1,4 +1,6 @@
 import os
+import shutil
+from pathlib import Path
 
 import click
 import pandas as pd
@@ -113,6 +115,8 @@ def main(config_path):
         callbacks=[EarlyStoppingCallback(early_stopping_patience=config.patience)]
     )
     trainer.train()
+
+    shutil.copy2(config_path, Path(config.output_dir)/Path(config_path).name)
 
 
 if __name__ == "__main__":

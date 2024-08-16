@@ -49,8 +49,8 @@ def batch_inference(model, tokenizer, sentences, batch_size=32):
 
 
 def load_dataset(dataset_path):
-    dataset = AMR3Dataset(dataset_path, LangType['HU'])
-    _, _, test_set = dataset.get_split()
+    dataset = AMR3Dataset(dataset_path)
+    _, _, test_set = dataset.get_split(test_lang=LangType['HU'])
     return pd.DataFrame(test_set)
 
 

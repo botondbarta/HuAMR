@@ -22,12 +22,11 @@ HF_TOKEN = os.getenv('HF_TOKEN')
 
 
 def load_dataset(config, eos_token):
-    dataset = AMR3Dataset(config.data_path, LangType[config.language], config.remove_wiki)
-    train, validation, test = dataset.get_split()
+    dataset = AMR3Dataset(config.data_path, config.remove_wiki)
+    train, validation, _ = dataset.get_split(LangType[config.train_language], LangType[config.dev_language])
     dataset = DatasetDict({
         'train': Dataset.from_pandas(pd.DataFrame(train)),
         'validation': Dataset.from_pandas(pd.DataFrame(validation)),
-        'test': Dataset.from_pandas(pd.DataFrame(test)),
     })
 
     prompt = """### Instruction
@@ -116,7 +115,7 @@ def main(config_path):
     )
     trainer.train()
 
-    shutil.copy2(config_path, Path(config.output_dir)/Path(config_path).name)
+    shutil.copy2(config_path, Path(config.output_dir) / Path(config_path).name)
 
 
 if __name__ == "__main__":

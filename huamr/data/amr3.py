@@ -5,22 +5,15 @@ import re
 import pandas as pd
 import penman
 
-from huamr.utils.config_reader import get_config_from_yaml
 from huamr.utils.langtype import LangType
 
 
 class AMR3Dataset:
-    def __init__(self,
-                 folder_path,
-                 lang_type: LangType = LangType.HU,
-                 remove_wiki: bool = True):
+    def __init__(self, folder_path, remove_wiki: bool = True):
         self.folder_path = folder_path
-        self.data = self._load_data(folder_path, lang_type, remove_wiki)
+        self.data = self._load_data(folder_path, remove_wiki)
 
-    def _load_data(self,
-                   folder_path,
-                   lang_type: LangType,
-                   remove_wiki: bool = True):
+    def _load_data(self, folder_path, remove_wiki: bool = True):
         translations = self._load_translations(folder_path, 'translation')
         all_data_df = self._load_all_annotated_data(folder_path)
 
@@ -36,7 +29,6 @@ class AMR3Dataset:
 
         df = pd.concat([df_en_sentence, df_hu_sentence], ignore_index=True)
 
-        df = self._keep_specified_language(df, lang_type)
         df = df.drop_duplicates(subset='sentence')
 
         # df['penman_graph'] = df['amr_graph'].apply(penman.decode)
@@ -44,12 +36,7 @@ class AMR3Dataset:
         #     df['penman_graph'] = df['penman_graph'].apply(self.remove_wiki_from_graph)
         # df['linearized'] = df['penman_graph'].apply(self._linearize)
 
-        return df[['id', 'sentence', 'amr_graph', 'split']]
-
-    def _keep_specified_language(self, df, lang_type: LangType) -> pd.DataFrame:
-        if lang_type == LangType.ALL:
-            return df
-        return df[df['lang'] == lang_type.value]
+        return df[['id', 'sentence', 'amr_graph', 'split', 'lang']]
 
     def _load_all_annotated_data(self, folder_path):
         train = self._load_data_from_folder(folder_path, 'training')
@@ -184,9 +171,19 @@ class AMR3Dataset:
         linearized = re.sub(r"\s+", " ", " ".join(pieces)).strip()
         return linearized.split(" ")
 
-    def get_split(self):
-        train = self.data[self.data['split'] == 'training'].to_dict(orient='records')
-        dev = self.data[self.data['split'] == 'dev'].to_dict(orient='records')
-        test = self.data[self.data['split'] == 'test'].to_dict(orient='records')
+    def get_split(
+            self,
+            train_lang: LangType = LangType.ALL,
+            dev_lang: LangType = LangType.ALL,
+            test_lang: LangType = LangType.ALL,
+    ):
+        def filter_by_lang(data, lang_type):
+            if lang_type == LangType.ALL:
+                return data
+            return data[data['lang'] == lang_type.value]
+
+        train = filter_by_lang(self.data[self.data['split'] == 'training'], train_lang).to_dict(orient='records')
+        dev = filter_by_lang(self.data[self.data['split'] == 'dev'], dev_lang).to_dict(orient='records')
+        test = filter_by_lang(self.data[self.data['split'] == 'test'], test_lang).to_dict(orient='records')
 
         return train, dev, test

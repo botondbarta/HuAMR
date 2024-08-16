@@ -5,7 +5,9 @@ quantize: 4bit
 # dataset
 data_path: /path/file
 remove_wiki: True
-language: HU
+train_language: ALL
+dev_language: HU
+test_language: HU
 
 # training
 num_train_epochs: 1

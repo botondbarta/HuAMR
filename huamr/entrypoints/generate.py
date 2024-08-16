@@ -15,7 +15,7 @@ from huamr.utils.model_factory import ModelFactory
 HF_TOKEN = os.getenv('HF_TOKEN')
 
 
-def inference(model, tokenizer, sentences, max_new_tokens=1024, temperature=0.1, num_beams=5):
+def inference(model, tokenizer, sentences, max_new_tokens=1024, num_beams=5):
     prompts = [f"""### Instruction
 Provide the AMR graph for the following sentence. Ensure that the graph captures the main concepts, the relationships between them, and any additional information that is important for understanding the meaning of the sentence. Use standard AMR notation, including concepts, roles, and relationships.
 
@@ -27,9 +27,7 @@ Provide the AMR graph for the following sentence. Ensure that the graph captures
     inputs = tokenizer(prompts, padding=True, return_tensors="pt").to("cuda")
 
     generation_config = GenerationConfig(
-        do_sample=True,
         num_beams=num_beams,
-        temperature=temperature,
         return_dict_in_generate=True,
         eos_token_id=tokenizer.eos_token_id,
         pad_token_id=tokenizer.pad_token_id,

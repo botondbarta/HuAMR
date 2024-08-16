@@ -61,6 +61,22 @@ class GemmaFactory:
         return model, tokenizer
 
 
+class LLMFactory:
+    @staticmethod
+    def get_model(model_name, quantize, HF_TOKEN):
+        model = AutoModelForCausalLM.from_pretrained(model_name,
+                                                     quantization_config=get_bnb_config(quantize),
+                                                     device_map='auto',
+                                                     token=HF_TOKEN)
+        tokenizer = AutoTokenizer.from_pretrained(model_name, use_fast=True, padding_side='left', token=HF_TOKEN)
+
+        model.config.pad_token_id = tokenizer.pad_token_id
+        model.config.use_cache = False
+
+        model = prepare_model_for_kbit_training(model)
+        return model, tokenizer
+
+
 class ModelFactory:
     @staticmethod
     def get_model(model_name, quantize, HF_TOKEN):
@@ -70,3 +86,5 @@ class ModelFactory:
             return MistralFactory.get_model(model_name, quantize, HF_TOKEN)
         if 'gemma' in model_name.lower():
             return GemmaFactory.get_model(model_name, quantize, HF_TOKEN)
+
+        return LLMFactory.get_model(model_name, quantize, HF_TOKEN)

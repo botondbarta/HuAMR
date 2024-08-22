@@ -10,8 +10,8 @@ logger = logging.getLogger(__name__)
 
 
 class MT5(S2SBaseModel):
-    def __init__(self, config_path):
-        super().__init__(config_path)
+    def __init__(self, config):
+        super().__init__(config)
 
         self.tokenizer = AutoTokenizer.from_pretrained(self.config.model_checkpoint)
         self.model = AutoModelForSeq2SeqLM.from_pretrained(self.config.model_checkpoint)

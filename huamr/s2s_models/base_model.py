@@ -9,8 +9,8 @@ logger = logging.getLogger(__name__)
 
 
 class S2SBaseModel(ABC):
-    def __init__(self, config_path):
-        self.config = get_config_from_yaml(config_path)
+    def __init__(self, config):
+        self.config = config
 
     @abstractmethod
     def get_model(self):

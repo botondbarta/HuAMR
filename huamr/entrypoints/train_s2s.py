@@ -77,7 +77,7 @@ def main(config_path):
     dataset = load_dataset(config, model)
 
     trainer = Seq2SeqTrainer(
-        model=model.get_model,
+        model=model.get_model(),
         args=get_training_arg(config),
         train_dataset=dataset["train"],
         eval_dataset=dataset["validation"],

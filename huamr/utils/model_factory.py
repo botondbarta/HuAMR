@@ -2,6 +2,7 @@ from huamr.llm_models.base_model import LLMBaseModel
 from huamr.llm_models.gemma import GemmaModel
 from huamr.llm_models.llama import LlamaModel
 from huamr.llm_models.mistral import MistralModel
+from huamr.llm_models.phi import PhiModel
 from huamr.s2s_models.base_model import S2SBaseModel
 from huamr.s2s_models.mt5 import MT5
 
@@ -12,7 +13,8 @@ class ModelFactory:
         model_map = {
             'llama': LlamaModel,
             'mistral': MistralModel,
-            'gemma': GemmaModel
+            'gemma': GemmaModel,
+            'phi': PhiModel,
         }
 
         for key, model_class in model_map.items():

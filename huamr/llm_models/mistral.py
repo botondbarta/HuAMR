@@ -1,9 +1,9 @@
 from typing import override
 
-from huamr.models.base_model import BaseModel
+from huamr.llm_models.base_model import LLMBaseModel
 
 
-class MistralModel(BaseModel):
+class MistralModel(LLMBaseModel):
     @override
     def set_special_tokens(self, model_name, tokenizer):
         if 'mistral-7b-instruct-v0.3' in model_name.lower():

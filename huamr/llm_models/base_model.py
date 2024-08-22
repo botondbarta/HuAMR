@@ -6,7 +6,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 from huamr.utils import get_bnb_config
 
 
-class BaseModel(ABC):
+class LLMBaseModel(ABC):
     def get_model_and_tokenizer(self, model_name, quantize, hf_token):
         model = self.get_model(model_name, quantize, hf_token)
         tokenizer = self.get_tokenizer(model_name, hf_token)

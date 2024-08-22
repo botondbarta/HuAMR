@@ -1,9 +1,9 @@
 from typing import override
 
-from huamr.models.base_model import BaseModel
+from huamr.llm_models.base_model import LLMBaseModel
 
 
-class LlamaModel(BaseModel):
+class LlamaModel(LLMBaseModel):
     @override
     def set_special_tokens(self, model_name, tokenizer):
         if "llama-3.1" in model_name.lower():

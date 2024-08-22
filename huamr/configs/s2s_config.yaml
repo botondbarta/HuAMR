@@ -22,6 +22,7 @@ gradient_accumulation_steps: 1
 warmup_ratio: 0.03
 weight_decay: 0.01
 valid_steps: 5000 # same as save_checkpoint_steps
+logging_steps: 500
 fp16: False
 compute_training_metrics: False
 

@@ -54,7 +54,6 @@ def get_training_arg(config):
         load_best_model_at_end=True,
         logging_steps=config.logging_steps,
 
-        max_grad_norm=config.max_grad_norm,
         num_train_epochs=config.num_train_epochs,
         warmup_ratio=config.warmup_ratio,
         group_by_length=config.group_by_length,

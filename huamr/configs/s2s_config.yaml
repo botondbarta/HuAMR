@@ -26,6 +26,13 @@ logging_steps: 500
 fp16: False
 compute_training_metrics: False
 
+# only used when training aya-101
+quantize: 4bit
+lora_rank: 16
+lora_alpha: 16
+lora_dropout: 0.05
+
+
 
 # predict
 prediction_file: None

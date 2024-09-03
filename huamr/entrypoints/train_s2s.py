@@ -71,12 +71,12 @@ def get_training_arg(config):
 def main(config_path):
     config = get_config_from_yaml(config_path)
 
-    model: S2SBaseModel = S2SModelFactory.get_model(config)
+    wrapped_model: S2SBaseModel = S2SModelFactory.get_model(config)
 
-    dataset = load_dataset(config, model)
+    dataset = load_dataset(config, wrapped_model)
 
     trainer = Seq2SeqTrainer(
-        model=model.get_model(),
+        model=wrapped_model.get_model(),
         args=get_training_arg(config),
         train_dataset=dataset["train"],
         eval_dataset=dataset["validation"],
@@ -85,7 +85,7 @@ def main(config_path):
 
     trainer.train()
 
-    trainer.save_model(os.path.join(config.output_dir, 'best_model'))
+    trainer.model.save_pretrained(os.path.join(config.output_dir, 'best_model'))
 
     shutil.copy2(config_path, Path(config.output_dir) / Path(config_path).name)
 

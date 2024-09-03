@@ -1,20 +1,37 @@
 import logging
 
+import peft
 from dotmap import DotMap
+from peft import get_peft_model, LoraConfig, TaskType
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 from typing_extensions import override
 
 from huamr.s2s_models.base_model import S2SBaseModel
+from huamr.utils import get_bnb_config
 
 logger = logging.getLogger(__name__)
 
 
-class MT5(S2SBaseModel):
+class Aya101(S2SBaseModel):
     def __init__(self, config: DotMap):
         super().__init__(config)
 
-        self._tokenizer = AutoTokenizer.from_pretrained(self.config.model_checkpoint, legacy=False)
-        self._model = AutoModelForSeq2SeqLM.from_pretrained(self.config.model_checkpoint)
+        self._tokenizer = AutoTokenizer.from_pretrained(self.config.model_checkpoint, legacy=False, use_fast=True)
+        model = AutoModelForSeq2SeqLM.from_pretrained(self.config.model_checkpoint,
+                                                      quantization_config=get_bnb_config(config.quantize),
+                                                      device_map='auto',
+                                                      )
+        model = peft.prepare_model_for_kbit_training(model)
+
+        peft_config = LoraConfig(
+            task_type=TaskType.SEQ_2_SEQ_LM,
+            r=config.lora_rank,
+            lora_alpha=config.lora_alpha,
+            lora_dropout=config.lora_dropout,
+            target_modules=["q", "v"]
+        )
+
+        self._model = get_peft_model(model, peft_config)
 
     @override
     def get_model(self):

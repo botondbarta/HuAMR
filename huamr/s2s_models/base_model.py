@@ -1,15 +1,13 @@
 import logging
 from abc import ABC, abstractmethod
 
-from transformers import AutoTokenizer, DataCollatorForSeq2Seq, Seq2SeqTrainer, Seq2SeqTrainingArguments
-
-from huamr.utils.config_reader import get_config_from_yaml
+from dotmap import DotMap
 
 logger = logging.getLogger(__name__)
 
 
 class S2SBaseModel(ABC):
-    def __init__(self, config):
+    def __init__(self, config: DotMap):
         self.config = config
 
     @abstractmethod

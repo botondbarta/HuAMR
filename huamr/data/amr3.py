@@ -31,10 +31,10 @@ class AMR3Dataset:
 
         df = df.drop_duplicates(subset='sentence')
 
-        # df['penman_graph'] = df['amr_graph'].apply(penman.decode)
-        # if remove_wiki:
-        #     df['penman_graph'] = df['penman_graph'].apply(self.remove_wiki_from_graph)
-        # df['linearized'] = df['penman_graph'].apply(self._linearize)
+        df['penman_graph'] = df['amr_graph'].apply(penman.decode)
+        if remove_wiki:
+            df['penman_graph'] = df['penman_graph'].apply(self.remove_wiki_from_graph)
+        df['amr_graph'] = df['penman_graph'].apply(self._linearize)
 
         return df[['id', 'sentence', 'amr_graph', 'split', 'lang']]
 
@@ -112,7 +112,7 @@ class AMR3Dataset:
 
         return penman.Graph(triples, metadata=graph.metadata)
 
-    def _linearize(self, graph: penman.Graph) -> list[str]:
+    def _linearize(self, graph: penman.Graph) -> str:
         # https://github.com/BramVanroy/multilingual-text-to-amr/blob/main/src/multi_amr/tokenization.py#L329
         # modified from SPRING
         graph_ = copy.deepcopy(graph)
@@ -125,33 +125,35 @@ class AMR3Dataset:
             raise exc
 
         linearized_nodes = self._tokenize_encoded_graph(linearized)
-        remap = {}
-        for i in range(1, len(linearized_nodes)):
-            nxt = linearized_nodes[i]
-            lst = linearized_nodes[i - 1]
-            if nxt == "/":
-                remap[lst] = f"<pointer:{len(remap)}>"
+        # remap = {}
+        # for i in range(1, len(linearized_nodes)):
+        #     nxt = linearized_nodes[i]
+        #     lst = linearized_nodes[i - 1]
+        #     if nxt == "/":
+        #         remap[lst] = f"<pointer:{len(remap)}>"
 
-        i = 1
-        linearized_nodes_ = [linearized_nodes[0]]
-        while i < (len(linearized_nodes)):
-            nxt = linearized_nodes[i]
-            lst = linearized_nodes_[-1]
-            if nxt in remap:
-                if lst == "(" and linearized_nodes[i + 1] == "/":
-                    nxt = remap[nxt]
-                    i += 1
-                elif lst.startswith(":"):
-                    nxt = remap[nxt]
-            elif lst == ":polarity" and nxt == "-":
-                linearized_nodes_[-1] = ":negation"
-                i += 1
-                continue
-            linearized_nodes_.append(nxt)
-            i += 1
+        # i = 1
+        # linearized_nodes_ = [linearized_nodes[0]]
+        # while i < (len(linearized_nodes)):
+        #     nxt = linearized_nodes[i]
+        #     lst = linearized_nodes_[-1]
+        #     if nxt in remap:
+        #         if lst == "(" and linearized_nodes[i + 1] == "/":
+        #             nxt = remap[nxt]
+        #             i += 1
+        #         elif lst.startswith(":"):
+        #             nxt = remap[nxt]
+        #     elif lst == ":polarity" and nxt == "-":
+        #         linearized_nodes_[-1] = ":negation"
+        #         i += 1
+        #         continue
+        #     linearized_nodes_.append(nxt)
+        #     i += 1
 
-        linearized_nodes_ = [tstrip for t in linearized_nodes_ if (tstrip := t.strip())]
-        return linearized_nodes_
+        # linearized_nodes_ = [tstrip for t in linearized_nodes_ if (tstrip := t.strip())]
+        linearized_nodes_ = [tstrip for t in linearized_nodes if (tstrip := t.strip())]
+        linearized_graph = ' '.join(linearized_nodes_)
+        return linearized_graph
 
     def _tokenize_encoded_graph(self, linearized: str) -> list[str]:
         # https://github.com/BramVanroy/multilingual-text-to-amr/blob/main/src/multi_amr/tokenization.py#L370

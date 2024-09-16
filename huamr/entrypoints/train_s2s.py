@@ -81,6 +81,7 @@ def main(config_path):
         train_dataset=dataset["train"],
         eval_dataset=dataset["validation"],
         callbacks=[EarlyStoppingCallback(early_stopping_patience=config.patience)],
+        compute_metrics=wrapped_model.compute_metrics
     )
 
     trainer.train()

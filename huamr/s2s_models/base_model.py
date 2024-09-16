@@ -3,6 +3,8 @@ from abc import ABC, abstractmethod
 
 from dotmap import DotMap
 
+from huamr.utils.smatch import calculate_smatch
+
 logger = logging.getLogger(__name__)
 
 
@@ -21,3 +23,16 @@ class S2SBaseModel(ABC):
     @abstractmethod
     def process_data_to_model_inputs(self, batch):
         raise NotImplementedError
+
+    def compute_metrics(self, pred):
+        labels_ids = pred.label_ids
+        labels_ids[labels_ids == -100] = self.get_tokenizer().pad_token_id
+
+        pred_ids = pred.predictions
+
+        pred_graphs = self.get_tokenizer().batch_decode(pred_ids, skip_special_tokens=True)
+        ref_graphs = self.get_tokenizer().batch_decode(labels_ids, skip_special_tokens=True)
+
+        smatch_score = calculate_smatch(ref_graphs, pred_graphs)
+
+        return {**smatch_score}

@@ -60,9 +60,7 @@ def main(data_path, ref_column, pred_column, out_path):
     print('Smatchpp F1 mean:', df['smatchpp_f1'].mean())
     print('Smatchpp Precision mean:', df['smatchpp_prec'].mean())
     print('Smatchpp Recall mean:', df['smatchpp_rec'].mean())
-
-
-
+    print('Unparsable AMR graphs:', df['smatchpp_f1'].isna().sum())
 
 
 if __name__ == "__main__":

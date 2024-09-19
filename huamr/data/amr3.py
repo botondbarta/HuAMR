@@ -17,11 +17,17 @@ class AMR3Dataset:
         translations = self._load_translations(folder_path, 'translation')
         all_data_df = self._load_all_annotated_data(folder_path)
 
+        # there are many (4) rows with same 'id' and 'sentence' in the original AMR3 data
+        all_data_df = all_data_df.drop_duplicates(subset='id')
+        translations = translations.drop_duplicates(subset='id')
+
         df = pd.merge(all_data_df, translations, on='id', how='left')
 
         df_en_sentence = df[['id', 'sentence', 'amr_graph', 'split']].copy()
         df_hu_sentence = df[['id', 'hu_sentence', 'amr_graph', 'split']].copy()
         df_hu_sentence = df_hu_sentence.rename(columns={'hu_sentence': 'sentence'})
+
+        # only does smth when the data is not fully translated
         df_hu_sentence = df_hu_sentence.dropna(subset=['sentence'])
 
         df_en_sentence['lang'] = LangType.EN.value

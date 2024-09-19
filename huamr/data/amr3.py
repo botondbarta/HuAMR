@@ -42,6 +42,8 @@ class AMR3Dataset:
             df['penman_graph'] = df['penman_graph'].apply(self.remove_wiki_from_graph)
         df['amr_graph'] = df['penman_graph'].apply(self._linearize)
 
+        df = df.sample(frac=1).reset_index(drop=True)
+
         return df[['id', 'sentence', 'amr_graph', 'split', 'lang']]
 
     def _load_all_annotated_data(self, folder_path):

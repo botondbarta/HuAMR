@@ -35,7 +35,9 @@ class AMR3Dataset:
 
         df = pd.concat([df_en_sentence, df_hu_sentence], ignore_index=True)
 
-        df = df.drop_duplicates(subset='sentence')
+        # drop the duplicates keeping them in training, dev, test order
+        df = df.sort_values(by=['sentence', 'split'], key=lambda x: x.map({'training': 0, 'dev': 1, 'test': 2}))
+        df = df.drop_duplicates(subset='sentence', keep='first')
 
         df['penman_graph'] = df['amr_graph'].apply(penman.decode)
         if remove_wiki:

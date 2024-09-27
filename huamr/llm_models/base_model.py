@@ -16,12 +16,13 @@ class LLMBaseModel(ABC):
         model.config.pad_token_id = tokenizer.pad_token_id
         model.config.use_cache = False
 
-        model = prepare_model_for_kbit_training(model)
+        if quantize:
+            model = prepare_model_for_kbit_training(model)
         return model, tokenizer
 
     def get_model(self, model_name, quantize, hf_token):
         return AutoModelForCausalLM.from_pretrained(model_name,
-                                                    quantization_config=get_bnb_config(quantize),
+                                                    quantization_config=get_bnb_config(quantize) if quantize else None,
                                                     device_map='auto',
                                                     token=hf_token)
 

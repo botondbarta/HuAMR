@@ -52,6 +52,7 @@ setup(
         'python-dateutil==2.9.0.post0',
         'pytz==2024.1',
         'PyYAML==6.0.1',
+        'quntoken==3.1.8',
         'regex==2024.4.16',
         'requests==2.31.0',
         'rich==13.7.1',

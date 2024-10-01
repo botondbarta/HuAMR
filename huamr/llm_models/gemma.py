@@ -8,7 +8,7 @@ from huamr.utils import get_bnb_config
 
 class GemmaModel(LLMBaseModel):
     @override
-    def get_model(self, model_name, quantize, hf_token):
+    def load_model(self, model_name, quantize, hf_token):
         return AutoModelForCausalLM.from_pretrained(model_name,
                                                     quantization_config=get_bnb_config(quantize),
                                                     device_map='auto',

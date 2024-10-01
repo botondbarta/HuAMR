@@ -13,7 +13,7 @@ from huamr.s2s_models.mt5 import MT5
 
 class ModelFactory:
     @staticmethod
-    def get_model(model_name, quantize, hf_token) -> LLMBaseModel:
+    def get_model(config: DotMap, hf_token, do_train: bool = False) -> LLMBaseModel:
         model_map = {
             'llama': LlamaModel,
             'mistral': MistralModel,
@@ -23,10 +23,10 @@ class ModelFactory:
         }
 
         for key, model_class in model_map.items():
-            if key in model_name.lower():
-                return model_class().get_model_and_tokenizer(model_name, quantize, hf_token)
+            if key in config.model_name.lower():
+                return model_class(config, hf_token, do_train)
 
-        return LLMBaseModel().get_model_and_tokenizer(model_name, quantize, hf_token)
+        return LLMBaseModel(config, hf_token, do_train)
 
 
 class S2SModelFactory:

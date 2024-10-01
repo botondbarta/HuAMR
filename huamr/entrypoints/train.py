@@ -89,7 +89,7 @@ def get_training_arg(config):
 def main(config_path):
     config = get_config_from_yaml(config_path)
 
-    model, tokenizer = ModelFactory.get_model(config.model_name, config.quantize, HF_TOKEN)
+    wrapped_model = ModelFactory.get_model(config, HF_TOKEN, do_train=True)
 
     peft_config = LoraConfig(
         r=config.lora_rank,
@@ -100,16 +100,16 @@ def main(config_path):
         target_modules=['up_proj', 'down_proj', 'gate_proj', 'k_proj', 'q_proj', 'v_proj', 'o_proj']
     )
 
-    dataset = load_dataset(config, tokenizer.eos_token)
+    dataset = load_dataset(config, wrapped_model.get_tokenizer().eos_token)
 
     trainer = SFTTrainer(
-        model=model,
+        model=wrapped_model.get_model(),
         train_dataset=dataset['train'],
         eval_dataset=dataset['validation'],
         peft_config=peft_config,
         dataset_text_field="text",
         max_seq_length=config.max_seq_length,
-        tokenizer=tokenizer,
+        tokenizer=wrapped_model.get_tokenizer(),
         args=get_training_arg(config),
         callbacks=[EarlyStoppingCallback(early_stopping_patience=config.patience)]
     )

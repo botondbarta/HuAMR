@@ -15,33 +15,11 @@ from huamr.utils.model_factory import ModelFactory
 HF_TOKEN = os.getenv('HF_TOKEN')
 
 
-def inference(model, tokenizer, sentences, max_new_tokens=1024, num_beams=5):
-    prompts = [f"""### Instruction
-Provide the AMR graph for the following sentence. Ensure that the graph captures the main concepts, the relationships between them, and any additional information that is important for understanding the meaning of the sentence. Use standard AMR notation, including concepts, roles, and relationships.
-
-### Sentence
-{sentence}
-
-### AMR Graph
-""" for sentence in sentences]
-    inputs = tokenizer(prompts, padding=True, return_tensors="pt").to("cuda")
-
-    generation_config = GenerationConfig(
-        num_beams=num_beams,
-        return_dict_in_generate=True,
-        eos_token_id=tokenizer.eos_token_id,
-        pad_token_id=tokenizer.pad_token_id,
-        max_new_tokens=max_new_tokens,
-    )
-    outputs = model.generate(**inputs, generation_config=generation_config)
-    return tokenizer.batch_decode(outputs.sequences, skip_special_tokens=True, clean_up_tokenization_spaces=True)
-
-
-def batch_inference(model, tokenizer, sentences, batch_size=32):
+def batch_inference(wrapped_model, sentences, batch_size=32):
     all_outputs = []
     for i in tqdm(range(0, len(sentences), batch_size)):
-        batch = sentences[i:i + batch_size]
-        outputs = inference(model, tokenizer, batch)
+        batch = sentences[i: i + batch_size]
+        outputs = wrapped_model.inference(batch)
         all_outputs.extend(outputs)
     return all_outputs
 
@@ -61,14 +39,14 @@ def main(config_path, adapter_path, output_path, batch_size):
     config = get_config_from_yaml(config_path)
     adapter = Path(adapter_path)
 
-    model, tokenizer = ModelFactory.get_model(config.model_name, config.quantize, HF_TOKEN)
-    model = PeftModel.from_pretrained(model, adapter)
-    model.eval()
+    wrapped_model = ModelFactory.get_model(config, HF_TOKEN)
+    wrapped_model.model = PeftModel.from_pretrained(wrapped_model.get_model(), adapter)
+    wrapped_model.model.eval()
 
     test_set = load_dataset(config.data_path)
 
     sentences = test_set['sentence'].tolist()
-    generated_outputs = batch_inference(model, tokenizer, sentences, batch_size)
+    generated_outputs = batch_inference(wrapped_model, sentences, batch_size)
     test_set['generated_amr'] = [output.split('### AMR Graph')[-1].strip() for output in generated_outputs]
 
     test_set.to_csv(os.path.join(output_path, 'generated.csv'), header=True, index=False)

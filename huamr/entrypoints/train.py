@@ -4,7 +4,7 @@ from pathlib import Path
 
 import click
 import pandas as pd
-from datasets import DatasetDict, Dataset
+from datasets import DatasetDict, Dataset, concatenate_datasets
 from peft import LoraConfig
 from transformers import (
     TrainingArguments,
@@ -15,6 +15,7 @@ from trl import SFTTrainer
 
 from huamr.data.amr3 import AMR3Dataset
 from huamr.utils.config_reader import get_config_from_yaml
+from huamr.utils.constants import sentence_to_amr_prompt, amr_to_sentence_prompt
 from huamr.utils.langtype import LangType
 from huamr.utils.model_factory import ModelFactory
 
@@ -29,37 +30,31 @@ def load_dataset(config, eos_token):
         'validation': Dataset.from_pandas(pd.DataFrame(validation)),
     })
 
-    sentence_to_amr_prompt = """### Instruction
-Provide the AMR graph for the following sentence. Ensure that the graph captures the main concepts, the relationships between them, and any additional information that is important for understanding the meaning of the sentence. Use standard AMR notation, including concepts, roles, and relationships.
-
-### Sentence
-{}
-
-### AMR Graph
-{}"""
-
-    amr_to_sentence_prompt = """### Instruction
-Generate a natural language sentence that accurately represents the given AMR graph. Ensure that the sentence captures all the main concepts, relationships, and information present in the AMR notation.
-
-### AMR Graph
-{}
-
-### Sentence
-{}"""
-
-    def formatting_prompts_func(examples):
+    def format_sentence_to_amr(examples):
         sentences = examples["sentence"]
         amr_graphs = examples["amr_graph"]
         texts = []
         for sentence, amr_graph in zip(sentences, amr_graphs):
             text_sentence_to_amr = sentence_to_amr_prompt.format(sentence, amr_graph) + eos_token
-            text_amr_to_sentence = amr_to_sentence_prompt.format(amr_graph, sentence) + eos_token
-            texts.extend([text_sentence_to_amr, text_amr_to_sentence])
+            texts.append(text_sentence_to_amr)
         return {"text": texts, }
 
-    dataset = dataset.map(formatting_prompts_func, batched=True, )
+    def format_amr_to_sentence(examples):
+        sentences = examples["sentence"]
+        amr_graphs = examples["amr_graph"]
+        texts = []
+        for sentence, amr_graph in zip(sentences, amr_graphs):
+            text_amr_to_sentence = amr_to_sentence_prompt.format(amr_graph, sentence) + eos_token
+            texts.append(text_amr_to_sentence)
+        return {"text": texts, }
 
-    return dataset
+    dataset_s2a = dataset.map(format_sentence_to_amr, batched=True, )
+    dataset_a2s = dataset.map(format_amr_to_sentence, batched=True, )
+
+    return DatasetDict({
+        'train': concatenate_datasets([dataset_s2a['train'], dataset_a2s['train']]),
+        'validation': concatenate_datasets([dataset_s2a['validation'], dataset_a2s['validation']]),
+    })
 
 
 def get_training_arg(config):

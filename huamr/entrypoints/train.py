@@ -29,7 +29,7 @@ def load_dataset(config, eos_token):
         'validation': Dataset.from_pandas(pd.DataFrame(validation)),
     })
 
-    prompt = """### Instruction
+    sentence_to_amr_prompt = """### Instruction
 Provide the AMR graph for the following sentence. Ensure that the graph captures the main concepts, the relationships between them, and any additional information that is important for understanding the meaning of the sentence. Use standard AMR notation, including concepts, roles, and relationships.
 
 ### Sentence
@@ -38,13 +38,23 @@ Provide the AMR graph for the following sentence. Ensure that the graph captures
 ### AMR Graph
 {}"""
 
+    amr_to_sentence_prompt = """### Instruction
+Generate a natural language sentence that accurately represents the given AMR graph. Ensure that the sentence captures all the main concepts, relationships, and information present in the AMR notation.
+
+### AMR Graph
+{}
+
+### Sentence
+{}"""
+
     def formatting_prompts_func(examples):
         sentences = examples["sentence"]
         amr_graphs = examples["amr_graph"]
         texts = []
         for sentence, amr_graph in zip(sentences, amr_graphs):
-            text = prompt.format(sentence, amr_graph) + eos_token
-            texts.append(text)
+            text_sentence_to_amr = sentence_to_amr_prompt.format(sentence, amr_graph) + eos_token
+            text_amr_to_sentence = amr_to_sentence_prompt.format(amr_graph, sentence) + eos_token
+            texts.extend([text_sentence_to_amr, text_amr_to_sentence])
         return {"text": texts, }
 
     dataset = dataset.map(formatting_prompts_func, batched=True, )

@@ -27,7 +27,7 @@ class S2SBaseModel(ABC):
     def compute_metrics(self, pred):
         labels_ids = pred.label_ids
         pred_ids = pred.predictions
-        
+
         labels_ids[labels_ids == -100] = self.get_tokenizer().pad_token_id
         pred_ids[pred_ids == -100] = self.get_tokenizer().pad_token_id
 
@@ -37,3 +37,6 @@ class S2SBaseModel(ABC):
         smatch_score = calculate_smatch(ref_graphs, pred_graphs)
 
         return {**smatch_score}
+
+
+

@@ -5,6 +5,7 @@ import re
 import pandas as pd
 import penman
 
+from huamr.utils.amr_helper import remove_wiki_from_graph
 from huamr.utils.langtype import LangType
 
 
@@ -41,7 +42,7 @@ class AMR3Dataset:
 
         df['penman_graph'] = df['amr_graph'].apply(penman.decode)
         if remove_wiki:
-            df['penman_graph'] = df['penman_graph'].apply(self.remove_wiki_from_graph)
+            df['penman_graph'] = df['penman_graph'].apply(remove_wiki_from_graph)
         df['amr_graph'] = df['penman_graph'].apply(self._linearize)
 
         df = df.sample(frac=1).reset_index(drop=True)
@@ -109,18 +110,6 @@ class AMR3Dataset:
 
         df.drop('sentence', axis=1, inplace=True)
         return df
-
-    def remove_wiki_from_graph(self, graph: penman.Graph) -> penman.Graph:
-        # https://github.com/BramVanroy/multilingual-text-to-amr/blob/efc1f7249bda34cd01dbe3ced2deaa5edeff84b8/src/multi_amr/utils/__init__.py#L79
-        # modified from SPRING
-        triples = []
-        for t in graph.triples:
-            v1, rel, v2 = t
-            if rel == ":wiki":
-                t = penman.Triple(v1, rel, "+")
-            triples.append(t)
-
-        return penman.Graph(triples, metadata=graph.metadata)
 
     def _linearize(self, graph: penman.Graph) -> str:
         # https://github.com/BramVanroy/multilingual-text-to-amr/blob/main/src/multi_amr/tokenization.py#L329

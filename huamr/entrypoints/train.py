@@ -1,10 +1,11 @@
 import os
 import shutil
 from pathlib import Path
+from typing import Optional
 
 import click
 import pandas as pd
-from datasets import DatasetDict, Dataset, concatenate_datasets
+from datasets import DatasetDict, Dataset
 from peft import LoraConfig
 from transformers import (
     TrainingArguments,
@@ -14,19 +15,34 @@ from transformers import (
 from trl import SFTTrainer
 
 from huamr.data.amr3 import AMR3Dataset
+from huamr.utils.amr_helper import filter_valid_amrs
 from huamr.utils.config_reader import get_config_from_yaml
-from huamr.utils.constants import sentence_to_amr_prompt, amr_to_sentence_prompt
+from huamr.utils.constants import sentence_to_amr_prompt
 from huamr.utils.langtype import LangType
 from huamr.utils.model_factory import ModelFactory
 
 HF_TOKEN = os.getenv('HF_TOKEN')
 
 
+def load_synthetic_data(file) -> Optional[pd.DataFrame]:
+    if file:
+        df = pd.read_csv(file)
+        df = df.rename(columns={'generated_amr': 'amr_graph'})
+        df = filter_valid_amrs(df, 'amr_graph')
+
+        return df
+
+    return None
+
+
 def load_dataset(config, eos_token):
     dataset = AMR3Dataset(config.data_path, config.remove_wiki)
     train, validation, _ = dataset.get_split(LangType[config.train_language], LangType[config.dev_language])
+
+    synthetic_data = load_synthetic_data(config.synthetic_data)
+
     dataset = DatasetDict({
-        'train': Dataset.from_pandas(pd.DataFrame(train)),
+        'train': Dataset.from_pandas(pd.concat([pd.DataFrame(train), synthetic_data])),
         'validation': Dataset.from_pandas(pd.DataFrame(validation)),
     })
 
@@ -39,21 +55,11 @@ def load_dataset(config, eos_token):
             texts.append(text_sentence_to_amr)
         return {"text": texts, }
 
-    def format_amr_to_sentence(examples):
-        sentences = examples["sentence"]
-        amr_graphs = examples["amr_graph"]
-        texts = []
-        for sentence, amr_graph in zip(sentences, amr_graphs):
-            text_amr_to_sentence = amr_to_sentence_prompt.format(amr_graph, sentence) + eos_token
-            texts.append(text_amr_to_sentence)
-        return {"text": texts, }
-
     dataset_s2a = dataset.map(format_sentence_to_amr, batched=True, )
-    dataset_a2s = dataset.map(format_amr_to_sentence, batched=True, )
 
     return DatasetDict({
-        'train': concatenate_datasets([dataset_s2a['train'], dataset_a2s['train']]),
-        'validation': concatenate_datasets([dataset_s2a['validation'], dataset_a2s['validation']]),
+        'train': dataset_s2a['train'],
+        'validation': dataset_s2a['validation'],
     })
 
 

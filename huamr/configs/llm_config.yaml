@@ -8,6 +8,8 @@ remove_wiki: True
 train_language: ALL
 dev_language: HU
 test_language: HU
+synthetic_data: /path/file
+
 
 # training
 num_train_epochs: 1

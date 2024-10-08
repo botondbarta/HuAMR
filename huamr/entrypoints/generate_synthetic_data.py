@@ -1,11 +1,11 @@
 import os
 from pathlib import Path
-from tqdm import tqdm
+
 import click
 import pandas as pd
 from peft import PeftModel
+from tqdm import tqdm
 
-from huamr.entrypoints.generate import load_dataset
 from huamr.utils.config_reader import get_config_from_yaml
 from huamr.utils.model_factory import ModelFactory
 

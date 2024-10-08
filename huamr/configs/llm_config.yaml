@@ -9,6 +9,7 @@ train_language: ALL
 dev_language: HU
 test_language: HU
 synthetic_data: /path/file
+synthetic_data_amount: 5000
 
 
 # training

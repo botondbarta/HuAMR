@@ -24,11 +24,12 @@ from huamr.utils.model_factory import ModelFactory
 HF_TOKEN = os.getenv('HF_TOKEN')
 
 
-def load_synthetic_data(file) -> Optional[pd.DataFrame]:
+def load_synthetic_data(file, synthetic_data_amount) -> Optional[pd.DataFrame]:
     if file:
         df = pd.read_csv(file)
         df = df.rename(columns={'generated_amr': 'amr_graph'})
         df = filter_valid_amrs(df, 'amr_graph')
+        df = df.iloc[:synthetic_data_amount]
 
         return df
 
@@ -39,7 +40,7 @@ def load_dataset(config, eos_token):
     dataset = AMR3Dataset(config.data_path, config.remove_wiki)
     train, validation, _ = dataset.get_split(LangType[config.train_language], LangType[config.dev_language])
 
-    synthetic_data = load_synthetic_data(config.synthetic_data)
+    synthetic_data = load_synthetic_data(config.synthetic_data, config.synthetic_data_amount)
 
     dataset = DatasetDict({
         'train': Dataset.from_pandas(pd.concat([pd.DataFrame(train), synthetic_data])),

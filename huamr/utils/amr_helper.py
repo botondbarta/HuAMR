@@ -1,4 +1,5 @@
 import penman
+from amr import AMR
 
 
 def remove_wiki_from_graph(graph: penman.Graph) -> penman.Graph:
@@ -29,6 +30,10 @@ def is_amr_valid(amr):
         graph = penman.decode(amr)
         penman.encode(remove_wiki_from_graph(graph))
 
+        theamr = AMR.parse_AMR_line(amr)
+        if theamr is None:
+            return False
+        
         return True
     except Exception:
         return False

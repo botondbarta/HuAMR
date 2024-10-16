@@ -96,6 +96,18 @@ def get_training_arg(config):
     )
 
 
+def get_peft_config(config):
+     return LoraConfig(
+        r=config.lora_rank,
+        lora_alpha=config.lora_alpha,
+        lora_dropout=config.lora_dropout,
+        bias='none',
+        use_rslora=config.use_rslora,
+        task_type='CAUSAL_LM',
+        target_modules=['up_proj', 'down_proj', 'gate_proj', 'k_proj', 'q_proj', 'v_proj', 'o_proj']
+    )
+
+
 @click.command()
 @click.argument('config_path')
 def main(config_path):
@@ -103,22 +115,13 @@ def main(config_path):
 
     wrapped_model = ModelFactory.get_model(config, HF_TOKEN, do_train=True)
 
-    peft_config = LoraConfig(
-        r=config.lora_rank,
-        lora_alpha=config.lora_alpha,
-        lora_dropout=config.lora_dropout,
-        bias='none',
-        task_type='CAUSAL_LM',
-        target_modules=['up_proj', 'down_proj', 'gate_proj', 'k_proj', 'q_proj', 'v_proj', 'o_proj']
-    )
-
     dataset = load_dataset(config, wrapped_model.get_tokenizer().eos_token)
 
     trainer = SFTTrainer(
         model=wrapped_model.get_model(),
         train_dataset=dataset['train'],
         eval_dataset=dataset['validation'],
-        peft_config=peft_config,
+        peft_config=get_peft_config(config) if config.use_lora else None,
         dataset_text_field="text",
         max_seq_length=config.max_seq_length,
         tokenizer=wrapped_model.get_tokenizer(),

@@ -29,6 +29,8 @@ gradient_accumulation_steps: 4
 group_by_length: True
 
 # lora
+use_lora: True
+use_rslora: False
 lora_rank: 16
 lora_alpha: 32
 lora_dropout: 0.05

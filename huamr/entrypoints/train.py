@@ -15,7 +15,7 @@ from transformers import (
 from trl import SFTTrainer
 
 from huamr.data.amr3 import AMR3Dataset
-from huamr.utils.amr_helper import filter_valid_amrs
+from huamr.utils.amr_validator import AMRValidator
 from huamr.utils.config_reader import get_config_from_yaml
 from huamr.utils.constants import sentence_to_amr_prompt
 from huamr.utils.langtype import LangType
@@ -24,11 +24,14 @@ from huamr.utils.model_factory import ModelFactory
 HF_TOKEN = os.getenv('HF_TOKEN')
 
 
-def load_synthetic_data(file, synthetic_data_amount) -> Optional[pd.DataFrame]:
+def load_synthetic_data(file, synthetic_data_amount, frame_arg_descr) -> Optional[pd.DataFrame]:
     if file:
+        amr_validator = AMRValidator(frame_arg_descr)
+
         df = pd.read_csv(file)
         df = df.rename(columns={'generated_amr': 'amr_graph'})
-        df = filter_valid_amrs(df, 'amr_graph')
+
+        df = df[df['amr_graph'].apply(amr_validator.validate)]
         df = df.iloc[:synthetic_data_amount]
 
         return df
@@ -40,7 +43,7 @@ def load_dataset(config, eos_token):
     dataset = AMR3Dataset(config.data_path, config.remove_wiki)
     train, validation, _ = dataset.get_split(LangType[config.train_language], LangType[config.dev_language])
 
-    synthetic_data = load_synthetic_data(config.synthetic_data, config.synthetic_data_amount)
+    synthetic_data = load_synthetic_data(config.synthetic_data, config.synthetic_data_amount, config.frame_arg_descr)
 
     dataset = DatasetDict({
         'train': Dataset.from_pandas(pd.concat([pd.DataFrame(train), synthetic_data])),
@@ -97,7 +100,7 @@ def get_training_arg(config):
 
 
 def get_peft_config(config):
-     return LoraConfig(
+    return LoraConfig(
         r=config.lora_rank,
         lora_alpha=config.lora_alpha,
         lora_dropout=config.lora_dropout,

@@ -19,7 +19,7 @@ def batch_inference(stog_model, europarl_data, output_path, batch_size=32):
         mode = 'w' if i == 0 else 'a'
 
         with open(output_file, mode) as f:
-            f.write('\n\n\n'.join(outputs))
+            f.write('\n\n'.join(outputs))
             f.write('\n\n')
 
 

@@ -20,7 +20,7 @@ def batch_inference(stog_model, europarl_data, output_path, batch_size=32):
 
         with open(output_file, mode) as f:
             f.write('\n\n\n'.join(outputs))
-            f.write('\n\n\n')
+            f.write('\n\n')
 
 
 def load_europarl_data(europarl_folder):

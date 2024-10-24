@@ -19,7 +19,6 @@ from huamr.utils.config_reader import get_config_from_yaml
 from huamr.utils.langtype import LangType
 from huamr.utils.model_factory import S2SModelFactory
 
-
 def load_dataset(config, model: S2SBaseModel):
     dataset = AMR3Dataset(config.data_path, config.remove_wiki)
     train, validation, test = dataset.get_split(LangType[config.train_language], LangType[config.dev_language])
@@ -85,7 +84,6 @@ def main(config_path):
         train_dataset=dataset["train"],
         eval_dataset=dataset["validation"],
         callbacks=[EarlyStoppingCallback(early_stopping_patience=config.patience)],
-        compute_metrics=wrapped_model.compute_metrics
     )
 
     trainer.train()

@@ -16,7 +16,7 @@ class AMRValidator:
                 arguments = {}
                 for arg in parts[1:]:
                     arg_label, _, arg_description = arg.partition(': ')
-                    arguments[arg_label] = arg_description
+                    arguments[arg_label.strip()] = arg_description
                 self.propbank[predicate] = arguments
 
         self.validators = [

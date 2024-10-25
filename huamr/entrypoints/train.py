@@ -17,7 +17,7 @@ from trl import SFTTrainer
 from huamr.data.amr3 import AMR3Dataset
 from huamr.utils.amr_validator import AMRValidator
 from huamr.utils.config_reader import get_config_from_yaml
-from huamr.utils.constants import sentence_to_amr_prompt
+from huamr.utils.constants import sentence_to_amr_prompt, ADDITIONS
 from huamr.utils.langtype import LangType
 from huamr.utils.model_factory import ModelFactory
 
@@ -39,7 +39,7 @@ def load_synthetic_data(file, synthetic_data_amount, frame_arg_descr) -> Optiona
     return None
 
 
-def load_dataset(config, eos_token):
+def load_dataset(config, eos_token, additional_tokens_mapping):
     dataset = AMR3Dataset(config.data_path, config.remove_wiki)
     train, validation, _ = dataset.get_split(LangType[config.train_language], LangType[config.dev_language])
 
@@ -55,6 +55,10 @@ def load_dataset(config, eos_token):
         amr_graphs = examples["amr_graph"]
         texts = []
         for sentence, amr_graph in zip(sentences, amr_graphs):
+
+            for original, reserved in additional_tokens_mapping.items():
+                amr_graph = amr_graph.replace(original, reserved)
+
             text_sentence_to_amr = sentence_to_amr_prompt.format(sentence, amr_graph) + eos_token
             texts.append(text_sentence_to_amr)
         return {"text": texts, }
@@ -118,7 +122,11 @@ def main(config_path):
 
     wrapped_model = ModelFactory.get_model(config, HF_TOKEN, do_train=True)
 
-    dataset = load_dataset(config, wrapped_model.get_tokenizer().eos_token)
+    voc = set(wrapped_model.get_tokenizer().get_vocab().keys())
+    new_tokens = list(sorted(set(ADDITIONS) - voc))
+    additional_tokens_mapping = {token: f'<|reserved_special_token_{i}|>' for i, token in enumerate(new_tokens)}
+
+    dataset = load_dataset(config, wrapped_model.get_tokenizer().eos_token, additional_tokens_mapping)
 
     trainer = SFTTrainer(
         model=wrapped_model.get_model(),

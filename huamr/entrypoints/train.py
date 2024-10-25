@@ -55,11 +55,11 @@ def load_dataset(config, eos_token, additional_tokens_mapping):
         amr_graphs = examples["amr_graph"]
         texts = []
         for sentence, amr_graph in zip(sentences, amr_graphs):
+            text_sentence_to_amr = sentence_to_amr_prompt.format(sentence, amr_graph) + eos_token
 
             for original, reserved in additional_tokens_mapping.items():
-                amr_graph = amr_graph.replace(original, reserved)
-
-            text_sentence_to_amr = sentence_to_amr_prompt.format(sentence, amr_graph) + eos_token
+                text_sentence_to_amr = text_sentence_to_amr.replace(original, reserved)
+                
             texts.append(text_sentence_to_amr)
         return {"text": texts, }
 

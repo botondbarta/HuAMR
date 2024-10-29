@@ -68,6 +68,7 @@ setup(
         'tyro==0.8.3',
         'tzdata==2024.1',
         'urllib3==2.2.1',
+        'unbabel-comet==2.2.2',
         'Unidecode==1.3.8',
         'wheel==0.41.2',
         'xxhash==3.4.1',

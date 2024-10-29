@@ -1,18 +1,20 @@
-import subprocess
+import os
 from pathlib import Path
 
 import click
 import pandas as pd
 from comet import download_model, load_from_checkpoint
+from huggingface_hub import login
 
-# subprocess.run('huggingface-cli login', shell=True)
+HF_TOKEN = os.getenv('HF_TOKEN')
+login(token=HF_TOKEN)
 
 
 def comet_score(data):
     model_path = download_model("Unbabel/wmt22-cometkiwi-da")
     model = load_from_checkpoint(model_path)
 
-    model_output = model.predict(data, batch_size=16, gpus=0)
+    model_output = model.predict(data, batch_size=64, gpus=0)
 
     return model_output
 

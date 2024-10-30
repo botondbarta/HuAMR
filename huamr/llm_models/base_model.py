@@ -1,7 +1,9 @@
 from abc import ABC
 
+import numpy as np
 from dotmap import DotMap
 from peft import prepare_model_for_kbit_training
+from smatchpp import Smatchpp, solvers
 from transformers import AutoModelForCausalLM, AutoTokenizer, GenerationConfig
 
 from huamr.utils import get_bnb_config
@@ -22,6 +24,9 @@ class LLMBaseModel(ABC):
 
         if config.quantize and do_train:
             self.model = prepare_model_for_kbit_training(self.model)
+
+        ilp = solvers.ILP()
+        self.measure = Smatchpp(alignmentsolver=ilp)
 
     def get_model(self):
         return self.model
@@ -56,7 +61,36 @@ Provide the AMR graph for the following sentence. Ensure that the graph captures
             max_new_tokens=self.config.generate_max_length,
         )
         outputs = self.model.generate(**inputs, generation_config=generation_config)
-        return self.tokenizer.batch_decode(outputs.sequences, skip_special_tokens=True, clean_up_tokenization_spaces=True)
+        return self.tokenizer.batch_decode(outputs.sequences, skip_special_tokens=True,
+                                           clean_up_tokenization_spaces=True)
 
     def set_special_tokens(self, model_name, tokenizer):
         pass
+
+    def compute_metrics(self, eval_preds):
+        preds, labels = eval_preds
+
+        if isinstance(preds, tuple):
+            preds = preds[0]
+
+        preds = np.where(preds != -100, preds, self.tokenizer.pad_token_id)
+        labels = np.where(labels != -100, labels, self.tokenizer.pad_token_id)
+
+        # Decode generated summaries into text
+        decoded_preds = self.tokenizer.batch_decode(preds, skip_special_tokens=True)
+        decoded_labels = self.tokenizer.batch_decode(labels, skip_special_tokens=True)
+
+        decoded_preds = [pred.split('### AMR Graph')[-1].strip() for pred in decoded_preds]
+        decoded_labels = [label.split('### AMR Graph')[-1].strip() for label in decoded_labels]
+
+        smatch_score = self.measure.score_corpus(decoded_labels, decoded_preds)
+
+        smatch_f1 = smatch_score['main']['F1']
+        smatch_prec = smatch_score['main']['Precision']
+        smatch_rec = smatch_score['main']['Recall']
+
+        return {
+            'smatch_f1': smatch_f1,
+            'smatch_prec': smatch_prec,
+            'smatch_rec': smatch_rec,
+        }

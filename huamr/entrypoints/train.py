@@ -7,12 +7,9 @@ import click
 import pandas as pd
 from datasets import DatasetDict, Dataset
 from peft import LoraConfig
-from transformers import (
-    TrainingArguments,
-    IntervalStrategy,
-    EarlyStoppingCallback,
-)
+from transformers import IntervalStrategy, EarlyStoppingCallback
 from trl import SFTTrainer
+from trl.trainer.sft_config import SFTConfig
 
 from huamr.data.amr3 import AMR3Dataset
 from huamr.utils.amr_validator import AMRValidator
@@ -68,7 +65,7 @@ def load_dataset(config, eos_token):
 
 
 def get_training_arg(config):
-    return TrainingArguments(
+    return SFTConfig(
         output_dir=config.output_dir,
         do_eval=True,
         per_device_train_batch_size=config.batch_size,
@@ -93,6 +90,8 @@ def get_training_arg(config):
         warmup_ratio=config.warmup_ratio,
         group_by_length=config.group_by_length,
 
+        metric_for_best_model='eval_smatch_f1',
+        greater_is_better=True,
         lr_scheduler_type='constant',
         bf16=True,
         report_to=None,
@@ -109,6 +108,12 @@ def get_peft_config(config):
         task_type='CAUSAL_LM',
         target_modules=['up_proj', 'down_proj', 'gate_proj', 'k_proj', 'q_proj', 'v_proj', 'o_proj']
     )
+
+
+def preprocess_logits_for_metrics(logits, labels):
+    if isinstance(logits, tuple):
+        logits = logits[0]
+    return logits.argmax(dim=-1)
 
 
 @click.command()
@@ -129,6 +134,7 @@ def main(config_path):
         max_seq_length=config.max_seq_length,
         tokenizer=wrapped_model.get_tokenizer(),
         args=get_training_arg(config),
+        preprocess_logits_for_metrics=preprocess_logits_for_metrics,
         callbacks=[EarlyStoppingCallback(early_stopping_patience=config.patience)]
     )
     trainer.train()

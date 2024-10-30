@@ -83,7 +83,7 @@ Provide the AMR graph for the following sentence. Ensure that the graph captures
         decoded_preds = [pred.split('### AMR Graph')[-1].strip() for pred in decoded_preds]
         decoded_labels = [label.split('### AMR Graph')[-1].strip() for label in decoded_labels]
 
-        smatch_score = self.measure.score_corpus(decoded_labels, decoded_preds)
+        smatch_score, _ = self.measure.score_corpus(decoded_labels, decoded_preds)
 
         smatch_f1 = smatch_score['main']['F1']
         smatch_prec = smatch_score['main']['Precision']

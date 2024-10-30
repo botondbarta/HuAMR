@@ -135,6 +135,7 @@ def main(config_path):
         tokenizer=wrapped_model.get_tokenizer(),
         args=get_training_arg(config),
         preprocess_logits_for_metrics=preprocess_logits_for_metrics,
+        compute_metrics=wrapped_model.compute_metrics,
         callbacks=[EarlyStoppingCallback(early_stopping_patience=config.patience)]
     )
     trainer.train()

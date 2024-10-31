@@ -8,6 +8,7 @@ from huamr.llm_models.nvidia import NvidiaModel
 from huamr.llm_models.phi import PhiModel
 from huamr.s2s_models.aya101 import Aya101
 from huamr.s2s_models.base_model import S2SBaseModel
+from huamr.s2s_models.encoderdecoder import AMREncoderDecoderModel
 from huamr.s2s_models.mt5 import MT5
 
 
@@ -35,6 +36,7 @@ class S2SModelFactory:
         model_map = {
             'mt5': MT5,
             'aya': Aya101,
+            'encoderdecoder': AMREncoderDecoderModel,
         }
 
         for key, model_class in model_map.items():

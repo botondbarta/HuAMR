@@ -13,7 +13,7 @@ class AMREncoderDecoderModel(S2SBaseModel):
     def __init__(self, config: DotMap):
         super().__init__(config)
 
-        self._tokenizer = AutoTokenizer.from_pretrained(self.config.model_checkpoint, legacy=False, use_fast=True)
+
         self.bert_tokenizer = BertTokenizer.from_pretrained('SZTAKI-HLT/hubert-base-cc')
         self.coder_tokenizer = AutoTokenizer.from_pretrained("qwen2.5-coder")
 
@@ -26,10 +26,6 @@ class AMREncoderDecoderModel(S2SBaseModel):
     @override
     def get_model(self):
         return self._model
-
-    @override
-    def get_tokenizer(self):
-        return self._tokenizer
 
     @override
     def process_data_to_model_inputs(self, batch):

@@ -1,7 +1,8 @@
 import logging
 
 from dotmap import DotMap
-from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, EncoderDecoderModel, BertTokenizer, AutoConfig, AutoModel
+from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, EncoderDecoderModel, BertTokenizer, AutoConfig, \
+    AutoModel, T5ForConditionalGeneration
 from typing_extensions import override
 
 from huamr.s2s_models.base_model import S2SBaseModel
@@ -14,7 +15,7 @@ class AMREncoderDecoderModel(S2SBaseModel):
         super().__init__(config)
 
         encoder_model = 'SZTAKI-HLT/hubert-base-cc'
-        decoder_model = 'Qwen/Qwen2.5-Coder-1.5B'
+        decoder_model = 'Salesforce/codet5-large'
 
         self.bert_tokenizer = BertTokenizer.from_pretrained(encoder_model)
         self.decoder_tokenizer = AutoTokenizer.from_pretrained(decoder_model)
@@ -22,13 +23,9 @@ class AMREncoderDecoderModel(S2SBaseModel):
         encoder_config = AutoConfig.from_pretrained(encoder_model)
         decoder_config = AutoConfig.from_pretrained(decoder_model)
 
-        # Modify decoder config to accept encoder hidden states
-        decoder_config.is_decoder = True
-        decoder_config.add_cross_attention = True
-        decoder_config.cross_attention_hidden_size = encoder_config.hidden_size
 
         encoder = AutoModel.from_pretrained(encoder_model)
-        decoder = AutoModel.from_pretrained(
+        decoder = T5ForConditionalGeneration.from_pretrained(
             decoder_model,
             config=decoder_config
         )
@@ -43,8 +40,7 @@ class AMREncoderDecoderModel(S2SBaseModel):
         self._model.config.pad_token_id = self.decoder_tokenizer.pad_token_id
         self._model.config.eos_token_id = self.decoder_tokenizer.eos_token_id
 
-        self._model.config.hidden_size = encoder_config.hidden_size
-        self._model.config.decoder_hidden_size = decoder_config.hidden_size
+        self._model.config.vocab_size = self.decoder_tokenizer.vocab_size
 
     @override
     def get_model(self):

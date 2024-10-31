@@ -1,7 +1,7 @@
 import logging
 
 from dotmap import DotMap
-from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, EncoderDecoderModel, BertTokenizer
+from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, EncoderDecoderModel, BertTokenizer, AutoConfig, AutoModel
 from typing_extensions import override
 
 from huamr.s2s_models.base_model import S2SBaseModel
@@ -13,13 +13,38 @@ class AMREncoderDecoderModel(S2SBaseModel):
     def __init__(self, config: DotMap):
         super().__init__(config)
 
-        self.bert_tokenizer = BertTokenizer.from_pretrained('SZTAKI-HLT/hubert-base-cc')
-        self.coder_tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen2.5-Coder-1.5B")
+        encoder_model = 'SZTAKI-HLT/hubert-base-cc'
+        decoder_model = 'Qwen/Qwen2.5-Coder-1.5B'
 
-        self._model = EncoderDecoderModel.from_encoder_decoder_pretrained(
-            'SZTAKI-HLT/hubert-base-cc',
-            'Qwen/Qwen2.5-Coder-1.5B'
+        self.bert_tokenizer = BertTokenizer.from_pretrained(encoder_model)
+        self.decoder_tokenizer = AutoTokenizer.from_pretrained(decoder_model)
+
+        encoder_config = AutoConfig.from_pretrained(encoder_model)
+        decoder_config = AutoConfig.from_pretrained(decoder_model)
+
+        # Modify decoder config to accept encoder hidden states
+        decoder_config.is_decoder = True
+        decoder_config.add_cross_attention = True
+        decoder_config.cross_attention_hidden_size = encoder_config.hidden_size
+
+        encoder = AutoModel.from_pretrained(encoder_model)
+        decoder = AutoModel.from_pretrained(
+            decoder_model,
+            config=decoder_config
         )
+
+        # Initialize the encoder-decoder model
+        self._model = EncoderDecoderModel(
+            encoder=encoder,
+            decoder=decoder
+        )
+
+        self._model.config.decoder_start_token_id = self.decoder_tokenizer.bos_token_id
+        self._model.config.pad_token_id = self.decoder_tokenizer.pad_token_id
+        self._model.config.eos_token_id = self.decoder_tokenizer.eos_token_id
+
+        self._model.config.hidden_size = encoder_config.hidden_size
+        self._model.config.decoder_hidden_size = decoder_config.hidden_size
 
     @override
     def get_model(self):
@@ -36,13 +61,13 @@ class AMREncoderDecoderModel(S2SBaseModel):
                                      max_length=self.config.max_input_length,
                                      truncation=True)
 
-        outputs = self.coder_tokenizer(text_target=batch['amr_graph'],
+        outputs = self.decoder_tokenizer(text_target=batch['amr_graph'],
                                        padding='max_length',
                                        max_length=self.config.max_output_length,
                                        truncation=True)
 
         outputs["input_ids"] = [
-            [(l if l != self.coder_tokenizer.pad_token_id else -100) for l in label] for label in outputs["input_ids"]
+            [(l if l != self.decoder_tokenizer.pad_token_id else -100) for l in label] for label in outputs["input_ids"]
         ]
         inputs['labels'] = outputs['input_ids']
         return inputs

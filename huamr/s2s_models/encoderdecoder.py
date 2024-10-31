@@ -28,6 +28,10 @@ class AMREncoderDecoderModel(S2SBaseModel):
         return self._model
 
     @override
+    def get_tokenizer(self):
+        raise NotImplementedError
+
+    @override
     def process_data_to_model_inputs(self, batch):
         inputs = self.bert_tokenizer(batch['sentence'],
                                  padding='max_length',

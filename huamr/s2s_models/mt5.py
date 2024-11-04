@@ -13,8 +13,12 @@ class MT5(S2SBaseModel):
     def __init__(self, config: DotMap):
         super().__init__(config)
 
+        if self.config.load_model:
+            self._model = AutoModelForSeq2SeqLM.from_pretrained(self.config.load_model)
+        else:
+            self._model = AutoModelForSeq2SeqLM.from_pretrained(self.config.model_checkpoint)
+
         self._tokenizer = AutoTokenizer.from_pretrained(self.config.model_checkpoint, legacy=False, use_fast=True)
-        self._model = AutoModelForSeq2SeqLM.from_pretrained(self.config.model_checkpoint)
 
     @override
     def get_model(self):

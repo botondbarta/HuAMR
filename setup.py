@@ -63,7 +63,7 @@ setup(
         'tokenizers==0.19.1',
         'tqdm==4.66.2',
         'transformers==4.40.1',
-        'trl==0.8.6',
+        'trl==0.11.4',
         'typing_extensions==4.9.0',
         'tyro==0.8.3',
         'tzdata==2024.1',

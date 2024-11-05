@@ -58,7 +58,7 @@ def get_training_arg(config):
         logging_steps=config.logging_steps,
 
         num_train_epochs=config.num_train_epochs,
-        warmup_ratio=config.warmup_ratio,
+        warmup_steps=config.warmup_steps,
         group_by_length=config.group_by_length,
         generation_max_length=config.max_predict_length,
         generation_num_beams=config.num_beams,

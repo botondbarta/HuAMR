@@ -22,7 +22,7 @@ save_total_limit: 3
 learning_rate: 0.00005
 batch_size: 16
 gradient_accumulation_steps: 1
-warmup_ratio: 0.03
+warmup_steps: 1000
 weight_decay: 0.01
 valid_steps: 5000 # same as save_checkpoint_steps
 logging_steps: 500

@@ -31,9 +31,12 @@ compute_training_metrics: False
 
 # only used when training aya-101
 quantize: 4bit
+
+use_lora: True
 lora_rank: 16
-lora_alpha: 16
+lora_alpha: 32
 lora_dropout: 0.05
+adapter_path: /path
 
 
 

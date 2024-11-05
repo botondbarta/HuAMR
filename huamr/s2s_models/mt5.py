@@ -1,6 +1,7 @@
 import logging
 
 from dotmap import DotMap
+from peft import LoraConfig, TaskType, get_peft_model, PeftModel
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 from typing_extensions import override
 
@@ -17,6 +18,20 @@ class MT5(S2SBaseModel):
             self._model = AutoModelForSeq2SeqLM.from_pretrained(self.config.load_model)
         else:
             self._model = AutoModelForSeq2SeqLM.from_pretrained(self.config.model_checkpoint)
+
+        if config.use_lora:
+            peft_config = LoraConfig(
+                task_type=TaskType.SEQ_2_SEQ_LM,
+                r=config.lora_rank,
+                lora_alpha=config.lora_alpha,
+                lora_dropout=config.lora_dropout,
+                target_modules=["q", "v"])
+
+            self._model = get_peft_model(self._model, peft_config)
+
+        if config.adapter_path:
+            self._model = PeftModel.from_pretrained(self._model, config.adapter_path)
+            self._model.eval()
 
         self._tokenizer = AutoTokenizer.from_pretrained(self.config.model_checkpoint, legacy=False, use_fast=True)
 

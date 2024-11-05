@@ -19,16 +19,17 @@ from huamr.utils.config_reader import get_config_from_yaml
 from huamr.utils.langtype import LangType
 from huamr.utils.model_factory import S2SModelFactory
 
+
 def load_dataset(config, model: S2SBaseModel):
     dataset = AMR3Dataset(config.data_path, config.remove_wiki)
-    train, validation, test = dataset.get_split(LangType[config.train_language], LangType[config.dev_language])
+    train, validation, _ = dataset.get_split(LangType[config.train_language], LangType[config.dev_language])
 
     synthetic_data = load_synthetic_data(config.synthetic_data, config.synthetic_data_amount, config.frame_arg_descr)
 
     dataset = DatasetDict({
         'train': Dataset.from_pandas(pd.concat([pd.DataFrame(train), synthetic_data])),
         'validation': Dataset.from_pandas(pd.DataFrame(validation)),
-        'test': Dataset.from_pandas(pd.DataFrame(test)),
+        #'test': Dataset.from_pandas(pd.DataFrame(test)),
     })
 
     dataset = dataset.map(model.process_data_to_model_inputs, batched=True, )

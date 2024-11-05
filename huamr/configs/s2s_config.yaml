@@ -1,7 +1,7 @@
-model_checkpoint: google/mt5-small
+model_checkpoint: google/mt5-large
 load_model: None
-max_input_length: 784
-max_output_length: 512
+max_input_length: 512
+max_output_length: 1024
 
 # dataset
 data_path: /path/file

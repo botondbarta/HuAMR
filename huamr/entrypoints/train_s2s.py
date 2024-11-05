@@ -56,6 +56,7 @@ def get_training_arg(config):
         save_total_limit=config.save_total_limit,
         load_best_model_at_end=True,
         logging_steps=config.logging_steps,
+        max_grad_norm=config.max_grad_norm,
 
         num_train_epochs=config.num_train_epochs,
         warmup_steps=config.warmup_steps,

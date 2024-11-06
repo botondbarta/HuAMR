@@ -9,6 +9,7 @@ from huamr.llm_models.phi import PhiModel
 from huamr.s2s_models.aya101 import Aya101
 from huamr.s2s_models.base_model import S2SBaseModel
 from huamr.s2s_models.mt5 import MT5
+from huamr.s2s_models.mbart50 import mBART50
 
 
 class ModelFactory:
@@ -35,6 +36,7 @@ class S2SModelFactory:
         model_map = {
             'mt5': MT5,
             'aya': Aya101,
+            'mbart': mBART50,
         }
 
         for key, model_class in model_map.items():

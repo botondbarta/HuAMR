@@ -9,11 +9,6 @@ Provide the AMR graph for the following sentence. Ensure that the graph captures
 ### AMR Graph
 {}"""
 
-amr_to_sentence_prompt = """### Instruction
-Generate a natural language sentence that accurately represents the given AMR graph. Ensure that the sentence captures all the main concepts, relationships, and information present in the AMR notation.
-
-### AMR Graph
-{}
-
-### Sentence
-{}"""
+shorter_prompt = """Text: {}
+AMR: {}
+"""

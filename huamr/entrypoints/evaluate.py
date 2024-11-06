@@ -20,7 +20,7 @@ def remove_wiki_from_graph(graph: penman.Graph) -> penman.Graph:
     for t in graph.triples:
         v1, rel, v2 = t
         if rel == ":wiki":
-            t = penman.Triple(v1, rel, "+")
+            continue
         triples.append(t)
 
     return penman.Graph(triples, metadata=graph.metadata)
@@ -39,11 +39,13 @@ def score(row, ref_column, pred_column):
         row['smatchpp_f1'] = smatch_score['main']['F1']
         row['smatchpp_prec'] = smatch_score['main']['Precision']
         row['smatchpp_rec'] = smatch_score['main']['Recall']
+        row['parsable'] = True
 
     except Exception as e:
-        row['smatchpp_f1'] = None
-        row['smatchpp_prec'] = None
-        row['smatchpp_rec'] = None
+        row['smatchpp_f1'] = 0.0
+        row['smatchpp_prec'] = 0.0
+        row['smatchpp_rec'] = 0.0
+        row['parsable'] = False
     return row
 
 @click.command()
@@ -60,7 +62,7 @@ def main(data_path, ref_column, pred_column, out_path):
     print('Smatchpp F1 mean:', df['smatchpp_f1'].mean())
     print('Smatchpp Precision mean:', df['smatchpp_prec'].mean())
     print('Smatchpp Recall mean:', df['smatchpp_rec'].mean())
-    print('Unparsable AMR graphs:', df['smatchpp_f1'].isna().sum())
+    print('Unparsable AMR graphs:', (~df['parsable']).sum())
 
 
 if __name__ == "__main__":

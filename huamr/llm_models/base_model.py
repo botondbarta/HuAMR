@@ -79,9 +79,9 @@ AMR: """ for sentence in sentences]
 
         smatch_score, _ = self.measure.score_corpus(decoded_labels, decoded_preds)
 
-        smatch_f1 = smatch_score['main']['F1']
-        smatch_prec = smatch_score['main']['Precision']
-        smatch_rec = smatch_score['main']['Recall']
+        smatch_f1 = smatch_score['main']['F1']['result']
+        smatch_prec = smatch_score['main']['Precision']['result']
+        smatch_rec = smatch_score['main']['Recall']['result']
 
         return {
             'smatch_f1': smatch_f1,

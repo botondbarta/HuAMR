@@ -44,8 +44,7 @@ class LLMBaseModel(ABC):
         return AutoTokenizer.from_pretrained(model_name, use_fast=True, padding_side='left', token=hf_token)
 
     def inference(self, sentences: list[str]) -> list[str]:
-        prompts = [f"""Text: {sentence}
-AMR: """ for sentence in sentences]
+        prompts = [f"Text: {sentence}\nAMR: " for sentence in sentences]
         inputs = self.tokenizer(prompts, padding=True, return_tensors="pt").to("cuda")
 
         generation_config = GenerationConfig(

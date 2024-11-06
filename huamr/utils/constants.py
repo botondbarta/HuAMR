@@ -9,6 +9,4 @@ Provide the AMR graph for the following sentence. Ensure that the graph captures
 ### AMR Graph
 {}"""
 
-shorter_prompt = """Text: {}
-AMR: {}
-"""
+shorter_prompt = "Text: {}\nAMR: {}"

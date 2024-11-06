@@ -73,5 +73,6 @@ setup(
         'wheel==0.41.2',
         'xxhash==3.4.1',
         'yarl==1.9.4',
+        'chromadb==0.5.16',
     ]
 )

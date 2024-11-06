@@ -87,12 +87,12 @@ def get_training_arg(config):
 
         max_grad_norm=config.max_grad_norm,
         num_train_epochs=config.num_train_epochs,
-        warmup_ratio=config.warmup_ratio,
+        warmup_steps=config.warmup_steps,
         group_by_length=config.group_by_length,
 
         metric_for_best_model='eval_smatch_f1',
         greater_is_better=True,
-        lr_scheduler_type='constant',
+        lr_scheduler_type='linear',
         bf16=True,
         report_to=None,
     )

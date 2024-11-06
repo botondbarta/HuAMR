@@ -22,7 +22,7 @@ weight_decay: 0.01
 logging_steps: 10
 eval_steps: 10
 save_steps: 10 # same as eval_steps
-warmup_ratio: 0.03
+warmup_steps: 1500
 max_grad_norm: 0.3
 save_total_limit: 1
 batch_size: 4

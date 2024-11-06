@@ -65,7 +65,7 @@ def get_training_arg(config):
         generation_max_length=config.max_predict_length,
         generation_num_beams=config.num_beams,
 
-        lr_scheduler_type='constant',
+        lr_scheduler_type='linear',
         fp16=config.fp16,
         report_to=None,
     )

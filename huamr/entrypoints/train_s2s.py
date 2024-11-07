@@ -3,8 +3,6 @@ import shutil
 from pathlib import Path
 
 import click
-import pandas as pd
-from datasets import DatasetDict, Dataset
 from transformers import (
     IntervalStrategy,
     EarlyStoppingCallback,
@@ -12,29 +10,10 @@ from transformers import (
     Seq2SeqTrainingArguments,
 )
 
-from huamr.data.amr3 import AMR3Dataset
-from huamr.entrypoints.train import load_synthetic_data
+from huamr.entrypoints.train import load_dataset
 from huamr.s2s_models.base_model import S2SBaseModel
 from huamr.utils.config_reader import get_config_from_yaml
-from huamr.utils.langtype import LangType
 from huamr.utils.model_factory import S2SModelFactory
-
-
-def load_dataset(config, model: S2SBaseModel):
-    dataset = AMR3Dataset(config.data_path, config.remove_wiki)
-    train, validation, _ = dataset.get_split(LangType[config.train_language], LangType[config.dev_language])
-
-    synthetic_data = load_synthetic_data(config.synthetic_data, config.synthetic_data_amount, config.frame_arg_descr)
-
-    dataset = DatasetDict({
-        'train': Dataset.from_pandas(pd.concat([pd.DataFrame(train), synthetic_data])),
-        'validation': Dataset.from_pandas(pd.DataFrame(validation)),
-        #'test': Dataset.from_pandas(pd.DataFrame(test)),
-    })
-
-    dataset = dataset.map(model.process_data_to_model_inputs, batched=True, )
-
-    return dataset
 
 
 def get_training_arg(config):
@@ -78,7 +57,8 @@ def main(config_path):
 
     wrapped_model: S2SBaseModel = S2SModelFactory.get_model(config)
 
-    dataset = load_dataset(config, wrapped_model)
+    dataset = load_dataset(config)
+    dataset = dataset.map(wrapped_model.process_data_to_model_inputs, batched=True, )
 
     trainer = Seq2SeqTrainer(
         model=wrapped_model.get_model(),

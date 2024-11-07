@@ -36,17 +36,24 @@ def load_synthetic_data(file, synthetic_data_amount, frame_arg_descr) -> Optiona
     return None
 
 
-def load_dataset(config, eos_token):
+def load_dataset(config):
     dataset = AMR3Dataset(config.data_path, config.remove_wiki)
     train, validation, _ = dataset.get_split(LangType[config.train_language], LangType[config.dev_language])
 
     synthetic_data = load_synthetic_data(config.synthetic_data, config.synthetic_data_amount, config.frame_arg_descr)
 
+    concatenated = pd.concat([pd.DataFrame(train), synthetic_data])
+    concatenated = concatenated.sample(frac=1).reset_index(drop=True)
+
     dataset = DatasetDict({
-        'train': Dataset.from_pandas(pd.concat([pd.DataFrame(train), synthetic_data])),
+        'train': Dataset.from_pandas(concatenated),
         'validation': Dataset.from_pandas(pd.DataFrame(validation)),
     })
 
+    return dataset
+
+
+def format_dataset(dataset: DatasetDict, eos_token):
     def format_sentence_to_amr(examples):
         sentences = examples["sentence"]
         amr_graphs = examples["amr_graph"]
@@ -56,12 +63,7 @@ def load_dataset(config, eos_token):
             texts.append(text_sentence_to_amr)
         return {"text": texts, }
 
-    dataset_s2a = dataset.map(format_sentence_to_amr, batched=True, )
-
-    return DatasetDict({
-        'train': dataset_s2a['train'],
-        'validation': dataset_s2a['validation'],
-    })
+    return dataset.map(format_sentence_to_amr, batched=True, )
 
 
 def get_training_arg(config):
@@ -90,8 +92,6 @@ def get_training_arg(config):
         warmup_steps=config.warmup_steps,
         group_by_length=config.group_by_length,
 
-        metric_for_best_model='eval_smatch_f1',
-        greater_is_better=True,
         lr_scheduler_type='linear',
         bf16=True,
         report_to=None,
@@ -123,7 +123,8 @@ def main(config_path):
 
     wrapped_model = ModelFactory.get_model(config, HF_TOKEN, do_train=True)
 
-    dataset = load_dataset(config, wrapped_model.get_tokenizer().eos_token)
+    dataset = load_dataset(config)
+    dataset = format_dataset(dataset, wrapped_model.get_tokenizer().eos_token)
 
     trainer = SFTTrainer(
         model=wrapped_model.get_model(),
@@ -134,8 +135,6 @@ def main(config_path):
         max_seq_length=config.max_seq_length,
         tokenizer=wrapped_model.get_tokenizer(),
         args=get_training_arg(config),
-        preprocess_logits_for_metrics=preprocess_logits_for_metrics,
-        compute_metrics=wrapped_model.compute_metrics,
         callbacks=[EarlyStoppingCallback(early_stopping_patience=config.patience)]
     )
     trainer.train()

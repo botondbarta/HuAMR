@@ -92,6 +92,9 @@ def get_training_arg(config):
         warmup_steps=config.warmup_steps,
         group_by_length=config.group_by_length,
 
+        metric_for_best_model='eval_smatch_f1',
+        greater_is_better=True,
+
         lr_scheduler_type='linear',
         bf16=True,
         report_to=None,
@@ -134,10 +137,14 @@ def main(config_path):
         dataset_text_field="text",
         max_seq_length=config.max_seq_length,
         tokenizer=wrapped_model.get_tokenizer(),
+        preprocess_logits_for_metrics=preprocess_logits_for_metrics,
+        compute_metrics=wrapped_model.compute_metrics,
         args=get_training_arg(config),
         callbacks=[EarlyStoppingCallback(early_stopping_patience=config.patience)]
     )
     trainer.train()
+
+    trainer.save_model(os.path.join(config.output_dir, 'best_model'))
 
     shutil.copy2(config_path, Path(config.output_dir) / Path(config_path).name)
 

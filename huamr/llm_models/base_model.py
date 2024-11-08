@@ -73,8 +73,8 @@ class LLMBaseModel(ABC):
         decoded_preds = self.tokenizer.batch_decode(preds, skip_special_tokens=True)
         decoded_labels = self.tokenizer.batch_decode(labels, skip_special_tokens=True)
 
-        decoded_preds = [pred.split('### AMR Graph')[-1].strip() for pred in decoded_preds]
-        decoded_labels = [label.split('### AMR Graph')[-1].strip() for label in decoded_labels]
+        decoded_preds = [pred.split('\nAMR: ')[-1].strip() for pred in decoded_preds]
+        decoded_labels = [label.split('\nAMR: ')[-1].strip() for label in decoded_labels]
 
         smatch_score, _ = self.measure.score_corpus(decoded_labels, decoded_preds)
 

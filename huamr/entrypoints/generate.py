@@ -33,7 +33,7 @@ def load_dataset(dataset_path):
 @click.argument('config_path')
 @click.argument('output_path')
 @click.argument('batch_size', type=int, default=32)
-@click.argument('adapter_path', default=None)
+@click.option('--adapter_path', default=None)
 def main(config_path, output_path, batch_size, adapter_path):
     config = get_config_from_yaml(config_path)
 

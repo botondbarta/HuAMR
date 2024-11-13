@@ -9,6 +9,7 @@ remove_wiki: True
 train_language: ALL
 dev_language: HU
 test_language: HU
+gold_data_amount: 50000
 synthetic_data: /path/file
 synthetic_data_amount: 5000
 frame_arg_descr: /path/file

@@ -41,9 +41,12 @@ def load_dataset(config):
     dataset = AMR3Dataset(config.data_path, config.remove_wiki)
     train, validation, _ = dataset.get_split(LangType[config.train_language], LangType[config.dev_language])
 
+    train_df = pd.DataFrame(train)
+    train_df = train_df.sample(frac=1).iloc[:config.gold_data_amount]
+
     synthetic_data = load_synthetic_data(config.synthetic_data, config.synthetic_data_amount, config.frame_arg_descr)
 
-    concatenated = pd.concat([pd.DataFrame(train), synthetic_data])
+    concatenated = pd.concat([train_df, synthetic_data])
     concatenated = concatenated.sample(frac=1).reset_index(drop=True)
 
     dataset = DatasetDict({

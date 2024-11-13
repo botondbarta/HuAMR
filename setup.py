@@ -62,7 +62,7 @@ setup(
         'sympy==1.12',
         'tokenizers==0.19.1',
         'tqdm==4.66.2',
-        'transformers==4.40.1',
+        'transformers==4.43.1',
         'trl==0.11.4',
         'typing_extensions==4.9.0',
         'tyro==0.8.3',

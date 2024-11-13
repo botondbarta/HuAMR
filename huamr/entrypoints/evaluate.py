@@ -26,10 +26,36 @@ def remove_wiki_from_graph(graph: penman.Graph) -> penman.Graph:
     return penman.Graph(triples, metadata=graph.metadata)
 
 
+def count_unmatched_open_parens(s):
+    in_quotes = False
+    open_paren_count = 0
+
+    for char in s:
+        if char == '"':
+            # Toggle the in_quotes flag when encountering a double quote
+            in_quotes = not in_quotes
+        elif char == '(' and not in_quotes:
+            open_paren_count += 1
+        elif char == ')' and not in_quotes:
+            open_paren_count -= 1
+
+    return max(open_paren_count, 0)
+
+def decode_with_closing_parens(pred_str):
+    unmatched_open_parens = count_unmatched_open_parens(pred_str)
+    pred_str += ' )' * unmatched_open_parens
+
+    try:
+        pred_graph = penman.decode(pred_str)
+        return pred_graph
+    except penman.DecodeError as e:
+        raise ValueError("Decoding failed after balancing parentheses.") from e
+
+
 def score(row, ref_column, pred_column):
     try:
         ref_graph = penman.decode(row[ref_column].replace('\n', ' '))
-        pred_graph = penman.decode(row[pred_column].replace('\n', ' '))
+        pred_graph = decode_with_closing_parens(row[pred_column].replace('\n', ' '))
 
         row[ref_column] = penman.encode(remove_wiki_from_graph(ref_graph))
         row[pred_column] = penman.encode(remove_wiki_from_graph(pred_graph))

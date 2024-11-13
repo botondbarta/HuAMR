@@ -60,6 +60,7 @@ setup(
         'safetensors==0.4.3',
         'setuptools==68.2.2',
         'sympy==1.12',
+        'smatchpp==1.7.0',
         'tokenizers==0.19.1',
         'tqdm==4.66.2',
         'transformers==4.43.1',

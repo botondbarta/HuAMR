@@ -25,6 +25,7 @@ def load_synthetic_data(file, synthetic_data_amount, frame_arg_descr) -> Optiona
     if file:
         df = pd.read_csv(file)
         df = df.rename(columns={'generated_amr': 'amr_graph'})
+        df = df.iloc[:40000] # last 3-4k examples are for testing
 
         if frame_arg_descr:
             amr_validator = AMRValidator(frame_arg_descr)

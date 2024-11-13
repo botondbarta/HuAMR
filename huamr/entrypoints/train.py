@@ -38,11 +38,14 @@ def load_synthetic_data(file, synthetic_data_amount, frame_arg_descr) -> Optiona
 
 
 def load_dataset(config):
+    train_df = pd.DataFrame()
+
     dataset = AMR3Dataset(config.data_path, config.remove_wiki)
     train, validation, _ = dataset.get_split(LangType[config.train_language], LangType[config.dev_language])
 
-    train_df = pd.DataFrame(train)
-    train_df = train_df.sample(frac=1).iloc[:config.gold_data_amount]
+    if config.load_amr3:
+        train_df = pd.DataFrame(train)
+        train_df = train_df.sample(frac=1).iloc[:config.gold_data_amount]
 
     synthetic_data = load_synthetic_data(config.synthetic_data, config.synthetic_data_amount, config.frame_arg_descr)
 

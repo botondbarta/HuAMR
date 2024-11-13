@@ -48,6 +48,7 @@ class LLMBaseModel(ABC):
         inputs = self.tokenizer(prompts, padding=True, return_tensors="pt").to("cuda")
 
         generation_config = GenerationConfig(
+            num_beams=5,
             return_dict_in_generate=True,
             eos_token_id=self.tokenizer.eos_token_id,
             pad_token_id=self.tokenizer.pad_token_id,

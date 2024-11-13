@@ -25,7 +25,7 @@ setup(
         'datasets==2.19.0',
         'dill==0.3.8',
         'docstring_parser==0.16',
-        'huggingface-hub==0.22.2',
+        'huggingface-hub==0.26.2',
         'idna==3.7',
         'mdurl==0.1.2',
         'mpmath==1.3.0',

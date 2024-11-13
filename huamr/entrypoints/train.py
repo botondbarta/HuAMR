@@ -130,7 +130,7 @@ def main(config_path):
     dataset = load_dataset(config)
     dataset = format_dataset(dataset, wrapped_model.get_tokenizer().eos_token)
 
-    collator = DataCollatorForCompletionOnlyLM('AMR: ', tokenizer=wrapped_model.get_tokenizer())
+    collator = DataCollatorForCompletionOnlyLM('AMR:', tokenizer=wrapped_model.get_tokenizer())
 
     trainer = SFTTrainer(
         model=wrapped_model.get_model(),

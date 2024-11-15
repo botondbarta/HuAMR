@@ -183,6 +183,6 @@ class AMR3Dataset:
 
         train = filter_by_lang(self.data[self.data['split'] == 'training'], train_lang).to_dict(orient='records')
         dev = filter_by_lang(self.data[self.data['split'] == 'dev'], dev_lang).to_dict(orient='records')
-        test = filter_by_lang(self.data[self.data['split'] == 'test'], test_lang).to_dict(orient='records')
+        test = filter_by_lang(self.data[self.data['split'] == 'test'], test_lang)[['sentence']].to_dict(orient='records')
 
         return train, dev, test

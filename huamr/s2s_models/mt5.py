@@ -34,14 +34,14 @@ class MT5(S2SBaseModel):
                                  padding='max_length',
                                  max_length=self.config.max_input_length,
                                  truncation=True)
+        if batch.has_key('amr_graph'):
+            outputs = self._tokenizer(text_target=batch['amr_graph'],
+                                      padding='max_length',
+                                      max_length=self.config.max_output_length,
+                                      truncation=True)
 
-        outputs = self._tokenizer(text_target=batch['amr_graph'],
-                                  padding='max_length',
-                                  max_length=self.config.max_output_length,
-                                  truncation=True)
-
-        outputs["input_ids"] = [
-            [(l if l != self._tokenizer.pad_token_id else -100) for l in label] for label in outputs["input_ids"]
-        ]
-        inputs['labels'] = outputs['input_ids']
+            outputs["input_ids"] = [
+                [(l if l != self._tokenizer.pad_token_id else -100) for l in label] for label in outputs["input_ids"]
+            ]
+            inputs['labels'] = outputs['input_ids']
         return inputs

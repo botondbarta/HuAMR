@@ -23,10 +23,19 @@ def batch_inference(wrapped_model, sentences, batch_size=32):
     return all_outputs
 
 
-def load_dataset(dataset_path):
-    dataset = AMR3Dataset(dataset_path)
-    _, _, test_set = dataset.get_split(test_lang=LangType['HU'])
-    return pd.DataFrame(test_set)
+def load_dataset(test_dataset, config):
+    if test_dataset == 'amr':
+        dataset = AMR3Dataset(config.data_path)
+        _, _, test_set = dataset.get_split(test_lang=LangType['HU'])
+        return pd.DataFrame(test_set)
+
+    elif test_dataset == 'huamr':
+        df = pd.read_csv(config.synthetic_data)
+        df = df.rename(columns={'generated_amr': 'amr_graph'})
+        df = df.iloc[40000:]  # last 3-4k examples are for testing
+        return df
+    else:
+        raise Exception('Not a vaild dataset')
 
 
 @click.command()
@@ -34,7 +43,8 @@ def load_dataset(dataset_path):
 @click.argument('output_path')
 @click.argument('batch_size', type=int, default=32)
 @click.option('--adapter_path', default=None)
-def main(config_path, output_path, batch_size, adapter_path):
+@click.option('-t', '--test_dataset', default='amr')
+def main(config_path, output_path, batch_size, adapter_path, test_dataset):
     config = get_config_from_yaml(config_path)
 
     wrapped_model = ModelFactory.get_model(config, HF_TOKEN)
@@ -43,7 +53,7 @@ def main(config_path, output_path, batch_size, adapter_path):
         wrapped_model.model = PeftModel.from_pretrained(wrapped_model.get_model(), adapter)
     wrapped_model.model.eval()
 
-    test_set = load_dataset(config.data_path)
+    test_set = load_dataset(test_dataset, config)
 
     sentences = test_set['sentence'].tolist()
     generated_outputs = batch_inference(wrapped_model, sentences, batch_size)

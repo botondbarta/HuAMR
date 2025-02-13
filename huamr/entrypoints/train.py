@@ -8,10 +8,11 @@ import pandas as pd
 from datasets import DatasetDict, Dataset
 from peft import LoraConfig
 from transformers import IntervalStrategy, EarlyStoppingCallback
-from trl import SFTTrainer, DataCollatorForCompletionOnlyLM
-from trl.trainer.sft_config import SFTConfig
+from trl import DataCollatorForCompletionOnlyLM
+from trl.trainer import SFTTrainer, SFTConfig, GRPOTrainer, GRPOConfig
 
 from huamr.data.amr3 import AMR3Dataset
+from huamr.utils.amr_helper import is_amr_valid
 from huamr.utils.amr_validator import AMRValidator
 from huamr.utils.config_reader import get_config_from_yaml
 from huamr.utils.constants import shorter_prompt
@@ -127,9 +128,14 @@ def preprocess_logits_for_metrics(logits, labels):
     return logits.argmax(dim=-1)
 
 
+def reward_amr_correctness(completions, **kwargs):
+    return [1.0 if is_amr_valid(completion) else 0.0 for completion in completions]
+
+
 @click.command()
 @click.argument('config_path')
-def main(config_path):
+@click.argument('training_method', default='sft')
+def main(config_path, training_method):
     config = get_config_from_yaml(config_path)
 
     wrapped_model = ModelFactory.get_model(config, HF_TOKEN, do_train=True)
@@ -139,20 +145,28 @@ def main(config_path):
 
     collator = DataCollatorForCompletionOnlyLM('AMR:', tokenizer=wrapped_model.get_tokenizer())
 
-    trainer = SFTTrainer(
-        model=wrapped_model.get_model(),
-        train_dataset=dataset['train'],
-        eval_dataset=dataset['validation'],
-        peft_config=get_peft_config(config) if config.use_lora else None,
-        dataset_text_field="text",
-        max_seq_length=config.max_seq_length,
-        tokenizer=wrapped_model.get_tokenizer(),
-        # preprocess_logits_for_metrics=preprocess_logits_for_metrics,
-        # compute_metrics=wrapped_model.compute_metrics,
-        data_collator=collator,
-        args=get_training_arg(config),
-        callbacks=[EarlyStoppingCallback(early_stopping_patience=config.patience)]
-    )
+    if training_method == 'sft':
+        trainer = SFTTrainer(
+            model=wrapped_model.get_model(),
+            train_dataset=dataset['train'],
+            eval_dataset=dataset['validation'],
+            peft_config=get_peft_config(config) if config.use_lora else None,
+            dataset_text_field="text",
+            max_seq_length=config.max_seq_length,
+            tokenizer=wrapped_model.get_tokenizer(),
+            # preprocess_logits_for_metrics=preprocess_logits_for_metrics,
+            # compute_metrics=wrapped_model.compute_metrics,
+            data_collator=collator,
+            args=get_training_arg(config),
+            callbacks=[EarlyStoppingCallback(early_stopping_patience=config.patience)]
+        )
+    else:
+        trainer = GRPOTrainer(
+            model=wrapped_model.get_model(),
+            reward_funcs=reward_amr_correctness,
+            args=GRPOConfig(),
+        )
+
     trainer.train()
 
     trainer.save_model(os.path.join(config.output_dir, 'best_model'))

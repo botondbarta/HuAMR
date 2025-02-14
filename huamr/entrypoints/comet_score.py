@@ -14,7 +14,7 @@ def comet_score(data):
     model_path = download_model("Unbabel/wmt22-cometkiwi-da")
     model = load_from_checkpoint(model_path)
 
-    model_output = model.predict(data, batch_size=64, gpus=0)
+    model_output = model.predict(data, batch_size=32, gpus=1)
 
     return model_output
 

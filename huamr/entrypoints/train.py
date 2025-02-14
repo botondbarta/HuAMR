@@ -110,7 +110,7 @@ def get_sft_training_arg(config):
         learning_rate=config.learning_rate,
         weight_decay=config.weight_decay,
 
-        evaluation_strategy=IntervalStrategy.STEPS,
+        eval_strategy=IntervalStrategy.STEPS,
         save_steps=config.save_steps,
         eval_steps=config.eval_steps,
         save_total_limit=config.save_total_limit,
@@ -150,7 +150,7 @@ def get_grpo_training_arg(config):
 
         weight_decay=config.weight_decay,
 
-        evaluation_strategy=IntervalStrategy.STEPS,
+        eval_strategy=IntervalStrategy.STEPS,
         save_steps=config.save_steps,
         eval_steps=config.eval_steps,
         save_total_limit=config.save_total_limit,

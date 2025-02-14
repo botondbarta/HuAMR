@@ -29,7 +29,7 @@ def get_training_arg(config):
         learning_rate=config.learning_rate,
         weight_decay=config.weight_decay,
 
-        evaluation_strategy=IntervalStrategy.STEPS,
+        eval_strategy=IntervalStrategy.STEPS,
         predict_with_generate=True,
         save_steps=config.valid_steps,
         eval_steps=config.valid_steps,

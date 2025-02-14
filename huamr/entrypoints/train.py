@@ -17,7 +17,7 @@ from huamr.data.amr3 import AMR3Dataset
 from huamr.utils.amr_helper import is_amr_valid
 from huamr.utils.amr_validator import AMRValidator
 from huamr.utils.config_reader import get_config_from_yaml
-from huamr.utils.constants import shorter_prompt
+from huamr.utils.constants import shorter_prompt, sentence_to_amr_prompt
 from huamr.utils.langtype import LangType
 from huamr.utils.model_factory import ModelFactory
 
@@ -26,18 +26,11 @@ ilp = solvers.ILP()
 measure = Smatchpp(alignmentsolver=ilp)
 
 
-def load_synthetic_data(file, synthetic_data_amount, frame_arg_descr) -> Optional[pd.DataFrame]:
+def load_synthetic_data(file, synthetic_data_amount) -> Optional[pd.DataFrame]:
     if file:
         df = pd.read_csv(file)
         df = df.rename(columns={'generated_amr': 'amr_graph'})
-        df = df.iloc[:40000]  # last 3-4k examples are for testing
-
-        if frame_arg_descr:
-            amr_validator = AMRValidator(frame_arg_descr)
-            df = df[df['amr_graph'].apply(amr_validator.validate)]
-
         df = df.iloc[:synthetic_data_amount]
-
         return df
 
     return None
@@ -53,7 +46,7 @@ def load_dataset(config):
         train_df = pd.DataFrame(train)
         train_df = train_df.sample(frac=1).iloc[:config.gold_data_amount]
 
-    synthetic_data = load_synthetic_data(config.synthetic_data, config.synthetic_data_amount, config.frame_arg_descr)
+    synthetic_data = load_synthetic_data(config.synthetic_data, config.synthetic_data_amount)
 
     concatenated = pd.concat([train_df, synthetic_data])
     concatenated = concatenated.sample(frac=1).reset_index(drop=True)
@@ -72,7 +65,7 @@ def format_dataset(dataset: DatasetDict, eos_token):
         amr_graphs = examples["amr_graph"]
         texts = []
         for sentence, amr_graph in zip(sentences, amr_graphs):
-            text_sentence_to_amr = shorter_prompt.format(sentence, amr_graph) + eos_token
+            text_sentence_to_amr = sentence_to_amr_prompt.format(sentence, amr_graph) + eos_token
             texts.append(text_sentence_to_amr)
         return {"prompt": texts, }
 
@@ -192,9 +185,8 @@ def main(config_path, training_method):
     dataset = load_dataset(config)
     dataset = format_dataset(dataset, wrapped_model.get_tokenizer().eos_token)
 
-    collator = DataCollatorForCompletionOnlyLM('AMR:', tokenizer=wrapped_model.get_tokenizer())
-
     if training_method == 'sft':
+        collator = DataCollatorForCompletionOnlyLM('### AMR Graph', tokenizer=wrapped_model.get_tokenizer())
         trainer = SFTTrainer(
             model=wrapped_model.get_model(),
             train_dataset=dataset['train'],

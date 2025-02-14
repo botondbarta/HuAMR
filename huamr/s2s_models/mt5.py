@@ -17,6 +17,8 @@ class MT5(S2SBaseModel):
             self._model = AutoModelForSeq2SeqLM.from_pretrained(self.config.load_model)
         else:
             self._model = AutoModelForSeq2SeqLM.from_pretrained(self.config.model_checkpoint)
+            for param in self._model.parameters():
+                param.data = param.data.contiguous()
 
         self._tokenizer = AutoTokenizer.from_pretrained(self.config.model_checkpoint, legacy=False, use_fast=True)
 

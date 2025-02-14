@@ -17,7 +17,7 @@ from huamr.data.amr3 import AMR3Dataset
 from huamr.utils.amr_helper import is_amr_valid
 from huamr.utils.amr_validator import AMRValidator
 from huamr.utils.config_reader import get_config_from_yaml
-from huamr.utils.constants import shorter_prompt, sentence_to_amr_prompt
+from huamr.utils.constants import shorter_prompt, sentence_to_amr_prompt, grpo_sentence_to_amr_prompt
 from huamr.utils.langtype import LangType
 from huamr.utils.model_factory import ModelFactory
 
@@ -59,13 +59,25 @@ def load_dataset(config):
     return dataset
 
 
-def format_dataset(dataset: DatasetDict, eos_token):
+def sft_format_dataset(dataset: DatasetDict, eos_token):
     def format_sentence_to_amr(examples):
         sentences = examples["sentence"]
         amr_graphs = examples["amr_graph"]
         texts = []
         for sentence, amr_graph in zip(sentences, amr_graphs):
             text_sentence_to_amr = sentence_to_amr_prompt.format(sentence, amr_graph) + eos_token
+            texts.append(text_sentence_to_amr)
+        return {"prompt": texts, }
+
+    return dataset.map(format_sentence_to_amr, batched=True, )
+
+def grpo_format_dataset(dataset: DatasetDict):
+    def format_sentence_to_amr(examples):
+        sentences = examples["sentence"]
+        amr_graphs = examples["amr_graph"]
+        texts = []
+        for sentence, amr_graph in zip(sentences, amr_graphs):
+            text_sentence_to_amr = grpo_sentence_to_amr_prompt.format(sentence)
             texts.append(text_sentence_to_amr)
         return {"prompt": texts, }
 
@@ -183,9 +195,10 @@ def main(config_path, training_method):
     wrapped_model = ModelFactory.get_model(config, HF_TOKEN, do_train=True)
 
     dataset = load_dataset(config)
-    dataset = format_dataset(dataset, wrapped_model.get_tokenizer().eos_token)
 
     if training_method == 'sft':
+        dataset = sft_format_dataset(dataset, wrapped_model.get_tokenizer().eos_token)
+
         collator = DataCollatorForCompletionOnlyLM('### AMR Graph', tokenizer=wrapped_model.get_tokenizer())
         trainer = SFTTrainer(
             model=wrapped_model.get_model(),
@@ -202,11 +215,13 @@ def main(config_path, training_method):
             callbacks=[EarlyStoppingCallback(early_stopping_patience=config.patience)]
         )
     else:
+        dataset = grpo_format_dataset(dataset)
         trainer = GRPOTrainer(
             model=wrapped_model.get_model(),
             train_dataset=dataset['train'],
+            eval_dataset=dataset['validation'],
             peft_config=get_peft_config(config) if config.use_lora else None,
-            reward_funcs=reward_amr_correctness,
+            reward_funcs=[reward_amr_correctness, reward_smatch],
             args=get_grpo_training_arg(config),
         )
 

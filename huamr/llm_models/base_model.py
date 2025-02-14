@@ -44,7 +44,7 @@ class LLMBaseModel(ABC):
         return AutoTokenizer.from_pretrained(model_name, use_fast=True, padding_side='left', token=hf_token)
 
     def inference(self, sentences: list[str]) -> list[str]:
-        prompts = [f"Text: {sentence}\nAMR: (" for sentence in sentences]
+        prompts = [f"### Instruction\nProvide the AMR graph for the following sentence. Ensure that the graph captures the main concepts, the relationships between them, and any additional information that is important for understanding the meaning of the sentence. Use standard AMR notation, including concepts, roles, and relationships.\n\n### Sentence\n{sentence}\n\n### AMR Graph\n" for sentence in sentences]
         inputs = self.tokenizer(prompts, padding=True, return_tensors="pt").to("cuda")
 
         generation_config = GenerationConfig(

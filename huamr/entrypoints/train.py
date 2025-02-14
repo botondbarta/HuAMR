@@ -14,7 +14,7 @@ from trl.trainer.sft_config import SFTConfig
 from huamr.data.amr3 import AMR3Dataset
 from huamr.utils.amr_validator import AMRValidator
 from huamr.utils.config_reader import get_config_from_yaml
-from huamr.utils.constants import shorter_prompt
+from huamr.utils.constants import shorter_prompt, sentence_to_amr_prompt
 from huamr.utils.langtype import LangType
 from huamr.utils.model_factory import ModelFactory
 
@@ -67,7 +67,7 @@ def format_dataset(dataset: DatasetDict, eos_token):
         amr_graphs = examples["amr_graph"]
         texts = []
         for sentence, amr_graph in zip(sentences, amr_graphs):
-            text_sentence_to_amr = shorter_prompt.format(sentence, amr_graph) + eos_token
+            text_sentence_to_amr = sentence_to_amr_prompt.format(sentence, amr_graph) + eos_token
             texts.append(text_sentence_to_amr)
         return {"text": texts, }
 

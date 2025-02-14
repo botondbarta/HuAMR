@@ -1,3 +1,5 @@
+import re
+
 import penman
 from amr import AMR
 
@@ -14,13 +16,17 @@ def remove_wiki_from_graph(graph: penman.Graph) -> penman.Graph:
     return penman.Graph(triples, metadata=graph.metadata)
 
 
-def is_amr_valid(amr):
+def is_amr_valid(amr: str) -> bool:
     try:
         amr = amr.replace('\n', ' ')
 
         if amr.count('(') == 0:
             return False
         if amr.count(')') == 0:
+            return False
+
+        pattern = r'\/ [\w-]+ \/'
+        if bool(re.search(pattern, amr)):
             return False
 
         graph = penman.decode(amr)

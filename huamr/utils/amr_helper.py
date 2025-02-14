@@ -30,12 +30,12 @@ def is_amr_valid(amr: str) -> bool:
         if count_unmatched_open_parens(amr) != 0:
             return False
 
-        pattern = r'\/ [\w-]+ \/'
-        if bool(re.search(pattern, amr)):
-            return False
-
         graph = penman.decode(amr)
-        penman.encode(remove_wiki_from_graph(graph))
+        encoded = penman.encode(remove_wiki_from_graph(graph))
+
+        pattern = r'\/ [\w-]+ \/'
+        if bool(re.search(pattern, amr)) or bool(re.search(pattern, encoded)):
+            return False
 
         theamr = AMR.parse_AMR_line(amr)
         if theamr is None:

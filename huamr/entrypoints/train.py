@@ -5,8 +5,10 @@ from typing import Optional
 
 import click
 import pandas as pd
+import penman
 from datasets import DatasetDict, Dataset
 from peft import LoraConfig
+from smatchpp import solvers, Smatchpp
 from transformers import IntervalStrategy, EarlyStoppingCallback
 from trl import DataCollatorForCompletionOnlyLM
 from trl.trainer import SFTTrainer, SFTConfig, GRPOTrainer, GRPOConfig
@@ -20,13 +22,15 @@ from huamr.utils.langtype import LangType
 from huamr.utils.model_factory import ModelFactory
 
 HF_TOKEN = os.getenv('HF_TOKEN')
+ilp = solvers.ILP()
+measure = Smatchpp(alignmentsolver=ilp)
 
 
 def load_synthetic_data(file, synthetic_data_amount, frame_arg_descr) -> Optional[pd.DataFrame]:
     if file:
         df = pd.read_csv(file)
         df = df.rename(columns={'generated_amr': 'amr_graph'})
-        df = df.iloc[:40000] # last 3-4k examples are for testing
+        df = df.iloc[:40000]  # last 3-4k examples are for testing
 
         if frame_arg_descr:
             amr_validator = AMRValidator(frame_arg_descr)
@@ -70,7 +74,7 @@ def format_dataset(dataset: DatasetDict, eos_token):
         for sentence, amr_graph in zip(sentences, amr_graphs):
             text_sentence_to_amr = shorter_prompt.format(sentence, amr_graph) + eos_token
             texts.append(text_sentence_to_amr)
-        return {"text": texts, }
+        return {"prompt": texts, }
 
     return dataset.map(format_sentence_to_amr, batched=True, )
 
@@ -87,7 +91,7 @@ def get_peft_config(config):
     )
 
 
-def get_training_arg(config):
+def get_sft_training_arg(config):
     return SFTConfig(
         output_dir=config.output_dir,
         do_eval=True,
@@ -122,10 +126,55 @@ def get_training_arg(config):
     )
 
 
+def get_grpo_training_arg(config):
+    return GRPOConfig(
+        learning_rate=config.learning_rate,
+        max_completion_length=1512,
+        num_generations=4,
+        remove_unused_columns=False,
+        temperature=0.9,
+
+        output_dir=config.output_dir,
+        do_eval=True,
+        per_device_train_batch_size=config.batch_size,
+        per_device_eval_batch_size=config.batch_size,
+        gradient_accumulation_steps=config.gradient_accumulation_steps,
+
+        log_level='debug',
+        optim='paged_adamw_32bit',
+
+        weight_decay=config.weight_decay,
+
+        evaluation_strategy=IntervalStrategy.STEPS,
+        save_steps=config.save_steps,
+        eval_steps=config.eval_steps,
+        save_total_limit=config.save_total_limit,
+        load_best_model_at_end=True,
+        logging_steps=config.logging_steps,
+
+        max_grad_norm=config.max_grad_norm,
+        num_train_epochs=config.num_train_epochs,
+        warmup_steps=config.warmup_steps,
+        group_by_length=config.group_by_length,
+
+        lr_scheduler_type='linear',
+        bf16=True,
+        report_to=None,
+    )
+
+
 def preprocess_logits_for_metrics(logits, labels):
     if isinstance(logits, tuple):
         logits = logits[0]
     return logits.argmax(dim=-1)
+
+
+def reward_smatch(completions, **kwargs):
+    return [
+        measure.score_pair(penman.decode(comp), penman.decode(truth))
+        for comp, truth
+        in zip(completions, kwargs['amr_graph'])
+    ]
 
 
 def reward_amr_correctness(completions, **kwargs):
@@ -151,20 +200,22 @@ def main(config_path, training_method):
             train_dataset=dataset['train'],
             eval_dataset=dataset['validation'],
             peft_config=get_peft_config(config) if config.use_lora else None,
-            dataset_text_field="text",
+            dataset_text_field="prompt",
             max_seq_length=config.max_seq_length,
             tokenizer=wrapped_model.get_tokenizer(),
             # preprocess_logits_for_metrics=preprocess_logits_for_metrics,
             # compute_metrics=wrapped_model.compute_metrics,
             data_collator=collator,
-            args=get_training_arg(config),
+            args=get_sft_training_arg(config),
             callbacks=[EarlyStoppingCallback(early_stopping_patience=config.patience)]
         )
     else:
         trainer = GRPOTrainer(
             model=wrapped_model.get_model(),
+            train_dataset=dataset['train'],
+            peft_config=get_peft_config(config) if config.use_lora else None,
             reward_funcs=reward_amr_correctness,
-            args=GRPOConfig(),
+            args=get_grpo_training_arg(config),
         )
 
     trainer.train()

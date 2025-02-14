@@ -21,18 +21,11 @@ from huamr.utils.model_factory import ModelFactory
 HF_TOKEN = os.getenv('HF_TOKEN')
 
 
-def load_synthetic_data(file, synthetic_data_amount, frame_arg_descr) -> Optional[pd.DataFrame]:
+def load_synthetic_data(file, synthetic_data_amount) -> Optional[pd.DataFrame]:
     if file:
         df = pd.read_csv(file)
         df = df.rename(columns={'generated_amr': 'amr_graph'})
-        df = df.iloc[:40000] # last 3-4k examples are for testing
-
-        if frame_arg_descr:
-            amr_validator = AMRValidator(frame_arg_descr)
-            df = df[df['amr_graph'].apply(amr_validator.validate)]
-
         df = df.iloc[:synthetic_data_amount]
-
         return df
 
     return None
@@ -48,7 +41,7 @@ def load_dataset(config):
         train_df = pd.DataFrame(train)
         train_df = train_df.sample(frac=1).iloc[:config.gold_data_amount]
 
-    synthetic_data = load_synthetic_data(config.synthetic_data, config.synthetic_data_amount, config.frame_arg_descr)
+    synthetic_data = load_synthetic_data(config.synthetic_data, config.synthetic_data_amount)
 
     concatenated = pd.concat([train_df, synthetic_data])
     concatenated = concatenated.sample(frac=1).reset_index(drop=True)
@@ -137,7 +130,7 @@ def main(config_path):
     dataset = load_dataset(config)
     dataset = format_dataset(dataset, wrapped_model.get_tokenizer().eos_token)
 
-    collator = DataCollatorForCompletionOnlyLM('AMR:', tokenizer=wrapped_model.get_tokenizer())
+    collator = DataCollatorForCompletionOnlyLM('### AMR Graph', tokenizer=wrapped_model.get_tokenizer())
 
     trainer = SFTTrainer(
         model=wrapped_model.get_model(),

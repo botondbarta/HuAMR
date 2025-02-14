@@ -171,7 +171,7 @@ def preprocess_logits_for_metrics(logits, labels):
 
 def reward_smatch(completions, **kwargs):
     return [
-        measure.score_pair(penman.decode(comp), penman.decode(truth))
+        measure.score_pair(penman.decode(comp), penman.decode(truth))['main']['F1']/100
         for comp, truth
         in zip(completions, kwargs['amr_graph'])
     ]

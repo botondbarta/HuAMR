@@ -121,6 +121,9 @@ def get_sft_training_arg(config):
         warmup_steps=config.warmup_steps,
         group_by_length=config.group_by_length,
 
+        dataset_text_field="prompt",
+        max_seq_length=config.max_seq_length,
+
         # metric_for_best_model='eval_smatch_f1',
         # greater_is_better=True,
 
@@ -175,7 +178,7 @@ def preprocess_logits_for_metrics(logits, labels):
 
 def reward_smatch(completions, **kwargs):
     return [
-        measure.score_pair(penman.decode(comp), penman.decode(truth))['main']['F1']/100 if is_amr_valid(comp) else 0.0
+        measure.score_pair(comp, truth)['main']['F1']/100 if is_amr_valid(comp) else 0.0
         for comp, truth
         in zip(completions, kwargs['amr_graph'])
     ]
@@ -204,9 +207,7 @@ def main(config_path, training_method):
             train_dataset=dataset['train'],
             eval_dataset=dataset['validation'],
             peft_config=get_peft_config(config) if config.use_lora else None,
-            dataset_text_field="prompt",
-            max_seq_length=config.max_seq_length,
-            tokenizer=wrapped_model.get_tokenizer(),
+            processing_class=wrapped_model.get_tokenizer(),
             # preprocess_logits_for_metrics=preprocess_logits_for_metrics,
             # compute_metrics=wrapped_model.compute_metrics,
             data_collator=collator,

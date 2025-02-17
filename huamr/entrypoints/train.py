@@ -176,9 +176,18 @@ def preprocess_logits_for_metrics(logits, labels):
     return logits.argmax(dim=-1)
 
 
+def calc_smatch_for_grpo(comp, ref):
+    try:
+        score = measure.score_pair(comp, ref)['main']['F1'] / 100
+
+        return score if score > 0.5 else 0.0
+    except Exception:
+        return 0.0
+
+
 def reward_smatch(completions, **kwargs):
     return [
-        measure.score_pair(comp, truth)['main']['F1']/100 if is_amr_valid(comp) else 0.0
+        calc_smatch_for_grpo(comp, truth) if is_amr_valid(comp) else 0.0
         for comp, truth
         in zip(completions, kwargs['amr_graph'])
     ]

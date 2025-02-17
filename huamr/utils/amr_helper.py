@@ -34,11 +34,11 @@ def strict_amr_check(amr: str) -> bool:
 
 def is_amr_valid(amr: str) -> bool:
     try:
-        amr = amr.replace('\n', ' ')
+        amr = amr.replace('\n', ' ').strip()
 
-        if amr.count('(') == 0:
+        if amr.count('(') == 0 or amr.count(')') == 0:
             return False
-        if amr.count(')') == 0:
+        if amr[0] != '(' or amr[-1] != ')':
             return False
 
         if max(count_unmatched_parentheses(amr), 0) != 0:

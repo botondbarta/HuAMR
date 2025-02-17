@@ -5,7 +5,6 @@ from typing import Optional
 
 import click
 import pandas as pd
-import penman
 from datasets import DatasetDict, Dataset
 from peft import LoraConfig
 from smatchpp import solvers, Smatchpp
@@ -14,7 +13,7 @@ from trl import DataCollatorForCompletionOnlyLM
 from trl.trainer import SFTTrainer, SFTConfig, GRPOTrainer, GRPOConfig
 
 from huamr.data.amr3 import AMR3Dataset
-from huamr.utils.amr_helper import is_amr_valid
+from huamr.utils.amr_helper import strict_amr_check
 from huamr.utils.config_reader import get_config_from_yaml
 from huamr.utils.constants import sentence_to_amr_prompt, grpo_sentence_to_amr_prompt
 from huamr.utils.langtype import LangType
@@ -187,14 +186,14 @@ def calc_smatch_for_grpo(comp, ref):
 
 def reward_smatch(completions, **kwargs):
     return [
-        calc_smatch_for_grpo(comp, truth) if is_amr_valid(comp) else 0.0
+        calc_smatch_for_grpo(comp, truth) if strict_amr_check(comp) else 0.0
         for comp, truth
         in zip(completions, kwargs['amr_graph'])
     ]
 
 
 def reward_amr_correctness(completions, **kwargs):
-    return [1.0 if is_amr_valid(completion) else 0.0 for completion in completions]
+    return [1.0 if strict_amr_check(completion) else 0.0 for completion in completions]
 
 
 @click.command()

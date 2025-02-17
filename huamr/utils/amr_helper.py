@@ -18,6 +18,20 @@ def remove_wiki_from_graph(graph: penman.Graph) -> penman.Graph:
     return penman.Graph(triples, metadata=graph.metadata)
 
 
+def strict_amr_check(amr: str) -> bool:
+    amr = amr.replace('\n', ' ')
+    try:
+        if not is_amr_valid(amr):
+            return False
+
+        if count_unmatched_parentheses(amr) != 0:
+            return False
+
+        return True
+    except Exception:
+        return False
+
+
 def is_amr_valid(amr: str) -> bool:
     try:
         amr = amr.replace('\n', ' ')
@@ -27,7 +41,7 @@ def is_amr_valid(amr: str) -> bool:
         if amr.count(')') == 0:
             return False
 
-        if count_unmatched_parentheses(amr) != 0:
+        if max(count_unmatched_parentheses(amr), 0) != 0:
             return False
 
         graph = penman.decode(amr)

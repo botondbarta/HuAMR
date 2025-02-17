@@ -15,9 +15,8 @@ from trl.trainer import SFTTrainer, SFTConfig, GRPOTrainer, GRPOConfig
 
 from huamr.data.amr3 import AMR3Dataset
 from huamr.utils.amr_helper import is_amr_valid
-from huamr.utils.amr_validator import AMRValidator
 from huamr.utils.config_reader import get_config_from_yaml
-from huamr.utils.constants import shorter_prompt, sentence_to_amr_prompt, grpo_sentence_to_amr_prompt
+from huamr.utils.constants import sentence_to_amr_prompt, grpo_sentence_to_amr_prompt
 from huamr.utils.langtype import LangType
 from huamr.utils.model_factory import ModelFactory
 
@@ -176,7 +175,7 @@ def preprocess_logits_for_metrics(logits, labels):
 
 def reward_smatch(completions, **kwargs):
     return [
-        measure.score_pair(penman.decode(comp), penman.decode(truth))['main']['F1']/100
+        measure.score_pair(penman.decode(comp), penman.decode(truth))['main']['F1']/100 if is_amr_valid(comp) else 0.0
         for comp, truth
         in zip(completions, kwargs['amr_graph'])
     ]
@@ -218,6 +217,7 @@ def main(config_path, training_method):
         dataset = grpo_format_dataset(dataset)
         trainer = GRPOTrainer(
             model=wrapped_model.get_model(),
+            processing_class=wrapped_model.get_tokenizer(),
             train_dataset=dataset['train'],
             eval_dataset=dataset['validation'],
             peft_config=get_peft_config(config) if config.use_lora else None,

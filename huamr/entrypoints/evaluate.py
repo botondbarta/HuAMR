@@ -26,23 +26,23 @@ def remove_wiki_from_graph(graph: penman.Graph) -> penman.Graph:
     return penman.Graph(triples, metadata=graph.metadata)
 
 
-def count_unmatched_open_parens(s):
+
+def count_unmatched_parentheses(amr_string: str) -> int:
     in_quotes = False
     open_paren_count = 0
 
-    for char in s:
+    for char in amr_string:
         if char == '"':
-            # Toggle the in_quotes flag when encountering a double quote
             in_quotes = not in_quotes
         elif char == '(' and not in_quotes:
             open_paren_count += 1
         elif char == ')' and not in_quotes:
             open_paren_count -= 1
 
-    return max(open_paren_count, 0)
+    return open_paren_count
 
 def decode_with_closing_parens(pred_str):
-    unmatched_open_parens = count_unmatched_open_parens(pred_str)
+    unmatched_open_parens = max(count_unmatched_parentheses(pred_str), 0)
     pred_str += ' )' * unmatched_open_parens
 
     try:

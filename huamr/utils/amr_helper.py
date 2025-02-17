@@ -3,7 +3,7 @@ import re
 import penman
 from amr import AMR
 
-from huamr.entrypoints.evaluate import count_unmatched_open_parens
+from huamr.entrypoints.evaluate import count_unmatched_parentheses
 
 
 def remove_wiki_from_graph(graph: penman.Graph) -> penman.Graph:
@@ -27,7 +27,7 @@ def is_amr_valid(amr: str) -> bool:
         if amr.count(')') == 0:
             return False
 
-        if count_unmatched_open_parens(amr) != 0:
+        if count_unmatched_parentheses(amr) != 0:
             return False
 
         graph = penman.decode(amr)

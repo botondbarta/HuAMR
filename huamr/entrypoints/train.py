@@ -6,20 +6,22 @@ from typing import Optional
 import click
 import pandas as pd
 from datasets import DatasetDict, Dataset
+from dotmap import DotMap
 from peft import LoraConfig
 from smatchpp import solvers, Smatchpp
 from transformers import IntervalStrategy, EarlyStoppingCallback
-from trl import DataCollatorForCompletionOnlyLM
 from trl.trainer import SFTTrainer, SFTConfig, GRPOTrainer, GRPOConfig
 
 from huamr.data.amr3 import AMR3Dataset
+from huamr.llm_models.base_model import LLMBaseModel
 from huamr.utils.amr_helper import strict_amr_check
 from huamr.utils.config_reader import get_config_from_yaml
-from huamr.utils.constants import sentence_to_amr_prompt, grpo_sentence_to_amr_prompt
+from huamr.utils.constants import SYSTEM_PROMPT
 from huamr.utils.langtype import LangType
 from huamr.utils.model_factory import ModelFactory
 
 HF_TOKEN = os.getenv('HF_TOKEN')
+
 ilp = solvers.ILP()
 measure = Smatchpp(alignmentsolver=ilp)
 
@@ -34,7 +36,7 @@ def load_synthetic_data(file, synthetic_data_amount) -> Optional[pd.DataFrame]:
     return None
 
 
-def load_dataset(config):
+def load_dataset(config: DotMap) -> DatasetDict:
     train_df = pd.DataFrame()
 
     dataset = AMR3Dataset(config.data_path, config.remove_wiki)
@@ -57,29 +59,27 @@ def load_dataset(config):
     return dataset
 
 
-def sft_format_dataset(dataset: DatasetDict, eos_token):
-    def format_sentence_to_amr(examples):
+def format_dataset(dataset: DatasetDict, tokenizer, training_method: str):
+    def format_examples(examples):
         sentences = examples["sentence"]
         amr_graphs = examples["amr_graph"]
         texts = []
-        for sentence, amr_graph in zip(sentences, amr_graphs):
-            text_sentence_to_amr = sentence_to_amr_prompt.format(sentence, amr_graph) + eos_token
-            texts.append(text_sentence_to_amr)
-        return {"prompt": texts, }
 
-    return dataset.map(format_sentence_to_amr, batched=True, )
+        for sentence, amr_graph in enumerate(sentences, amr_graphs):
+            chat_temp = [
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": sentence},
+            ]
 
-def grpo_format_dataset(dataset: DatasetDict):
-    def format_sentence_to_amr(examples):
-        sentences = examples["sentence"]
-        amr_graphs = examples["amr_graph"]
-        texts = []
-        for sentence, amr_graph in zip(sentences, amr_graphs):
-            text_sentence_to_amr = grpo_sentence_to_amr_prompt.format(sentence)
-            texts.append(text_sentence_to_amr)
-        return {"prompt": texts, }
+            if training_method == "sft":
+                chat_temp.append({"role": "assistant", "content": amr_graph})
 
-    return dataset.map(format_sentence_to_amr, batched=True, )
+            text = tokenizer.apply_chat_template(chat_temp, tokenize=False)
+            texts.append(text)
+
+        return {"prompt": texts}
+
+    return dataset.map(format_examples, batched=True)
 
 
 def get_peft_config(config):
@@ -94,97 +94,65 @@ def get_peft_config(config):
     )
 
 
-def get_sft_training_arg(config):
-    return SFTConfig(
-        output_dir=config.output_dir,
-        do_eval=True,
-        per_device_train_batch_size=config.batch_size,
-        per_device_eval_batch_size=config.batch_size,
-        gradient_accumulation_steps=config.gradient_accumulation_steps,
+def get_training_config(config: DotMap, training_method: str) -> SFTConfig | GRPOConfig:
+    common_args = {
+        "output_dir": config.output_dir,
+        "do_eval": True,
+        "per_device_train_batch_size": config.batch_size,
+        "per_device_eval_batch_size": config.batch_size,
+        "gradient_accumulation_steps": config.gradient_accumulation_steps,
+        "log_level": "debug",
+        "optim": "paged_adamw_32bit",
+        "learning_rate": config.learning_rate,
+        "weight_decay": config.weight_decay,
+        "eval_strategy": IntervalStrategy.STEPS,
+        "save_steps": config.save_steps,
+        "eval_steps": config.eval_steps,
+        "save_total_limit": config.save_total_limit,
+        "load_best_model_at_end": True,
+        "logging_steps": config.logging_steps,
+        "max_grad_norm": config.max_grad_norm,
+        "num_train_epochs": config.num_train_epochs,
+        "warmup_steps": config.warmup_steps,
+        "group_by_length": config.group_by_length,
+        "lr_scheduler_type": "linear",
+        "report_to": None,
+    }
 
-        log_level='debug',
-        optim='paged_adamw_32bit',
-
-        learning_rate=config.learning_rate,
-        weight_decay=config.weight_decay,
-
-        eval_strategy=IntervalStrategy.STEPS,
-        save_steps=config.save_steps,
-        eval_steps=config.eval_steps,
-        save_total_limit=config.save_total_limit,
-        load_best_model_at_end=True,
-        logging_steps=config.logging_steps,
-
-        max_grad_norm=config.max_grad_norm,
-        num_train_epochs=config.num_train_epochs,
-        warmup_steps=config.warmup_steps,
-        group_by_length=config.group_by_length,
-
-        dataset_text_field="prompt",
-        max_seq_length=config.max_seq_length,
-
-        # metric_for_best_model='eval_smatch_f1',
-        # greater_is_better=True,
-
-        lr_scheduler_type='linear',
-        bf16=True,
-        report_to=None,
-    )
-
-
-def get_grpo_training_arg(config):
-    return GRPOConfig(
-        learning_rate=config.learning_rate,
-        max_completion_length=1512,
-        num_generations=4,
-        remove_unused_columns=False,
-        temperature=0.9,
-
-        output_dir=config.output_dir,
-        do_eval=True,
-        per_device_train_batch_size=config.batch_size,
-        per_device_eval_batch_size=config.batch_size,
-        gradient_accumulation_steps=config.gradient_accumulation_steps,
-
-        log_level='debug',
-        optim='paged_adamw_32bit',
-
-        weight_decay=config.weight_decay,
-
-        eval_strategy=IntervalStrategy.STEPS,
-        save_steps=config.save_steps,
-        eval_steps=config.eval_steps,
-        save_total_limit=config.save_total_limit,
-        load_best_model_at_end=True,
-        logging_steps=config.logging_steps,
-
-        max_grad_norm=config.max_grad_norm,
-        num_train_epochs=config.num_train_epochs,
-        warmup_steps=config.warmup_steps,
-        group_by_length=config.group_by_length,
-
-        lr_scheduler_type='linear',
-        bf16=True,
-        report_to=None,
-    )
+    if training_method == "sft":
+        return SFTConfig(
+            **common_args,
+            dataset_text_field="prompt",
+            max_seq_length=config.max_seq_length,
+            bf16=True,
+        )
+    elif training_method == "grpo":
+        return GRPOConfig(
+            **common_args,
+            max_completion_length=config.max_completion_length,
+            num_generations=config.num_generations,
+            remove_unused_columns=False,
+            temperature=config.temperature,
+            bf16=False,
+        )
+    else:
+        raise ValueError(f"Unsupported training method: {training_method}")
 
 
-def preprocess_logits_for_metrics(logits, labels):
-    if isinstance(logits, tuple):
-        logits = logits[0]
-    return logits.argmax(dim=-1)
-
-
-def calc_smatch_for_grpo(comp, ref):
+def calc_smatch_for_grpo(comp_graph: str, ref_graph: str) -> float:
     try:
-        score = measure.score_pair(comp, ref)['main']['F1'] / 100
+        score = measure.score_pair(comp_graph, ref_graph)['main']['F1'] / 100
 
-        return score if score > 0.5 else 0.0
+        if score <= 0.5:
+            return 0.0
+        return ((score - 0.5) / 0.1) * 0.2
     except Exception:
         return 0.0
 
 
-def reward_smatch(completions, **kwargs):
+def reward_smatch(completions: list[str], **kwargs) -> list[float]:
+    completions = [completion.lstrip('assistant\n\n') for completion in completions]
+
     return [
         calc_smatch_for_grpo(comp, truth) if strict_amr_check(comp) else 0.0
         for comp, truth
@@ -192,50 +160,54 @@ def reward_smatch(completions, **kwargs):
     ]
 
 
-def reward_amr_correctness(completions, **kwargs):
+def reward_amr_correctness(completions: list[str], **kwargs) -> list[float]:
+    completions = [completion.lstrip('assistant\n\n') for completion in completions]
     return [1.0 if strict_amr_check(completion) else 0.0 for completion in completions]
+
+
+def create_trainer(wrapped_model: LLMBaseModel, dataset: DatasetDict, config: DotMap,
+                   training_method: str) -> SFTTrainer | GRPOTrainer:
+    peft_config = get_peft_config(config) if config.use_lora else None
+    model = wrapped_model.get_model()
+    tokenizer = wrapped_model.get_tokenizer()
+    formatted_dataset = format_dataset(dataset, tokenizer, training_method)
+
+    if training_method == "sft":
+        return SFTTrainer(
+            model=model,
+            train_dataset=formatted_dataset["train"],
+            eval_dataset=formatted_dataset["validation"],
+            peft_config=peft_config,
+            processing_class=tokenizer,
+            args=get_training_config(config, training_method),
+            callbacks=[EarlyStoppingCallback(early_stopping_patience=config.patience)]
+        )
+    elif training_method == "grpo":
+        return GRPOTrainer(
+            model=model,
+            processing_class=tokenizer,
+            train_dataset=formatted_dataset["train"],
+            eval_dataset=formatted_dataset["validation"],
+            peft_config=peft_config,
+            reward_funcs=[reward_amr_correctness, reward_smatch],
+            args=get_training_config(config, training_method),
+        )
+    else:
+        raise ValueError(f"Unsupported training method: {training_method}")
 
 
 @click.command()
 @click.argument('config_path')
-@click.argument('training_method', default='sft')
+@click.argument('training_method', default='sft', type=click.Choice(['sft', 'grpo']))
 def main(config_path, training_method):
     config = get_config_from_yaml(config_path)
 
     wrapped_model = ModelFactory.get_model(config, HF_TOKEN, do_train=True)
 
     dataset = load_dataset(config)
-
-    if training_method == 'sft':
-        dataset = sft_format_dataset(dataset, wrapped_model.get_tokenizer().eos_token)
-
-        collator = DataCollatorForCompletionOnlyLM('### AMR Graph', tokenizer=wrapped_model.get_tokenizer())
-        trainer = SFTTrainer(
-            model=wrapped_model.get_model(),
-            train_dataset=dataset['train'],
-            eval_dataset=dataset['validation'],
-            peft_config=get_peft_config(config) if config.use_lora else None,
-            processing_class=wrapped_model.get_tokenizer(),
-            # preprocess_logits_for_metrics=preprocess_logits_for_metrics,
-            # compute_metrics=wrapped_model.compute_metrics,
-            data_collator=collator,
-            args=get_sft_training_arg(config),
-            callbacks=[EarlyStoppingCallback(early_stopping_patience=config.patience)]
-        )
-    else:
-        dataset = grpo_format_dataset(dataset)
-        trainer = GRPOTrainer(
-            model=wrapped_model.get_model(),
-            processing_class=wrapped_model.get_tokenizer(),
-            train_dataset=dataset['train'],
-            eval_dataset=dataset['validation'],
-            peft_config=get_peft_config(config) if config.use_lora else None,
-            reward_funcs=[reward_amr_correctness, reward_smatch],
-            args=get_grpo_training_arg(config),
-        )
+    trainer = create_trainer(wrapped_model, dataset, config, training_method)
 
     trainer.train()
-
     trainer.save_model(os.path.join(config.output_dir, 'best_model'))
 
     shutil.copy2(config_path, Path(config.output_dir) / Path(config_path).name)

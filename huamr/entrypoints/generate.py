@@ -57,7 +57,7 @@ def main(config_path, output_path, batch_size, adapter_path, test_dataset):
 
     sentences = test_set['sentence'].tolist()
     generated_outputs = batch_inference(wrapped_model, sentences, batch_size)
-    test_set['generated_amr'] = [output.split('AMR Graph\n')[-1].strip() for output in generated_outputs]
+    test_set['generated_amr'] = [output.split('assistant\n\n')[-1].strip() for output in generated_outputs]
 
     test_set.to_csv(os.path.join(output_path, 'generated.csv'), header=True, index=False)
 

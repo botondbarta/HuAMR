@@ -63,7 +63,7 @@ setup(
         'smatchpp==1.7.0',
         'tokenizers==0.21.0',
         'tqdm==4.67.0',
-        'transformers==4.48.3',
+        'transformers==4.46.0',
         'trl==0.15.0',
         'typing_extensions==4.9.0',
         'tyro==0.8.3',

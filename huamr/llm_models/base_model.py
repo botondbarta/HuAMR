@@ -1,12 +1,12 @@
 from abc import ABC
 
-import numpy as np
 from dotmap import DotMap
 from peft import prepare_model_for_kbit_training
 from smatchpp import Smatchpp, solvers
 from transformers import AutoModelForCausalLM, AutoTokenizer, GenerationConfig
 
 from huamr.utils import get_bnb_config
+from huamr.utils.constants import SYSTEM_PROMPT
 
 
 class LLMBaseModel(ABC):
@@ -44,8 +44,13 @@ class LLMBaseModel(ABC):
         return AutoTokenizer.from_pretrained(model_name, use_fast=True, padding_side='left', token=hf_token)
 
     def inference(self, sentences: list[str]) -> list[str]:
-        prompts = [f"### Instruction\nProvide the AMR graph for the following sentence. Ensure that the graph captures the main concepts, the relationships between them, and any additional information that is important for understanding the meaning of the sentence. Use standard AMR notation, including concepts, roles, and relationships.\n\n### Sentence\n{sentence}\n\n### AMR Graph\n" for sentence in sentences]
-        inputs = self.tokenizer(prompts, padding=True, return_tensors="pt").to("cuda")
+        prompts = [
+            [
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": sentence},
+            ] for sentence in sentences
+        ]
+        inputs = self.tokenizer.apply_chat_template(prompts, padding=True, return_tensors="pt").to("cuda")
 
         generation_config = GenerationConfig(
             num_beams=5,
@@ -60,31 +65,3 @@ class LLMBaseModel(ABC):
 
     def set_special_tokens(self, model_name, tokenizer):
         pass
-
-    def compute_metrics(self, eval_preds):
-        preds, labels = eval_preds
-
-        if isinstance(preds, tuple):
-            preds = preds[0]
-
-        preds = np.where(preds != -100, preds, self.tokenizer.pad_token_id)
-        labels = np.where(labels != -100, labels, self.tokenizer.pad_token_id)
-
-        # Decode generated summaries into text
-        decoded_preds = self.tokenizer.batch_decode(preds, skip_special_tokens=True)
-        decoded_labels = self.tokenizer.batch_decode(labels, skip_special_tokens=True)
-
-        decoded_preds = [pred.split('\nAMR: ')[-1].strip() for pred in decoded_preds]
-        decoded_labels = [label.split('\nAMR: ')[-1].strip() for label in decoded_labels]
-
-        smatch_score, _ = self.measure.score_corpus(decoded_labels, decoded_preds)
-
-        smatch_f1 = smatch_score['main']['F1']['result']
-        smatch_prec = smatch_score['main']['Precision']['result']
-        smatch_rec = smatch_score['main']['Recall']['result']
-
-        return {
-            'smatch_f1': smatch_f1,
-            'smatch_prec': smatch_prec,
-            'smatch_rec': smatch_rec,
-        }

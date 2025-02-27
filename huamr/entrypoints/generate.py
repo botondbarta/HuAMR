@@ -3,6 +3,7 @@ from pathlib import Path
 
 import click
 import pandas as pd
+from dotmap import DotMap
 from peft import PeftModel
 from tqdm import tqdm
 
@@ -23,10 +24,10 @@ def batch_inference(wrapped_model, sentences, batch_size=32):
     return all_outputs
 
 
-def load_dataset(test_dataset, config):
+def load_dataset(test_dataset, config: DotMap) -> pd.DataFrame:
     if test_dataset == 'amr':
         dataset = AMR3Dataset(config.data_path)
-        _, _, test_set = dataset.get_split(test_lang=LangType['HU'])
+        _, _, test_set = dataset.get_split(test_lang=LangType[config.test_language])
         return pd.DataFrame(test_set)
 
     elif test_dataset == 'huamr':

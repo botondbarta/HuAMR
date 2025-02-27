@@ -31,6 +31,12 @@ batch_size: 4
 gradient_accumulation_steps: 4
 group_by_length: True
 
+# grpo
+max_prompt_length: 1024
+max_completion_length: 1024,
+num_generations: 4
+temperature: 0.6
+
 # lora
 use_lora: True
 use_rslora: False
@@ -39,8 +45,7 @@ lora_alpha: 32
 lora_dropout: 0.05
 
 
-max_seq_length: 8192
-patience: 20
-
+max_seq_length: 4096
+patience: 15
 
 generate_max_length: 1024

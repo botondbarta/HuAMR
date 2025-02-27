@@ -129,6 +129,7 @@ def get_training_config(config: DotMap, training_method: str) -> SFTConfig | GRP
     elif training_method == "grpo":
         return GRPOConfig(
             **common_args,
+            max_prompt_length=config.max_prompt_length,
             max_completion_length=config.max_completion_length,
             num_generations=config.num_generations,
             remove_unused_columns=False,

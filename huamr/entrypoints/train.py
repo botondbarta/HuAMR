@@ -74,8 +74,7 @@ def format_dataset(dataset: DatasetDict, tokenizer, training_method: str):
             if training_method == "sft":
                 chat_temp.append({"role": "assistant", "content": amr_graph})
 
-            text = tokenizer.apply_chat_template(chat_temp, tokenize=False)
-            texts.append(text)
+            texts.append(chat_temp)
 
         return {"prompt": texts}
 
@@ -151,8 +150,8 @@ def calc_smatch_for_grpo(comp_graph: str, ref_graph: str) -> float:
         return 0.0
 
 
-def reward_smatch(completions: list[str], **kwargs) -> list[float]:
-    completions = [completion.lstrip('assistant\n\n') for completion in completions]
+def reward_smatch(completions, **kwargs) -> list[float]:
+    completions = [completion[0]["content"] for completion in completions]
 
     return [
         calc_smatch_for_grpo(comp, truth) if strict_amr_check(comp) else 0.0
@@ -161,8 +160,8 @@ def reward_smatch(completions: list[str], **kwargs) -> list[float]:
     ]
 
 
-def reward_amr_correctness(completions: list[str], **kwargs) -> list[float]:
-    completions = [completion.lstrip('assistant\n\n') for completion in completions]
+def reward_amr_correctness(completions, **kwargs) -> list[float]:
+    completions = [completion[0]["content"] for completion in completions]
     return [1.0 if strict_amr_check(completion) else 0.0 for completion in completions]
 
 

@@ -33,7 +33,7 @@ group_by_length: True
 
 # grpo
 max_prompt_length: 1024
-max_completion_length: 1024,
+max_completion_length: 1024
 num_generations: 4
 temperature: 0.6
 

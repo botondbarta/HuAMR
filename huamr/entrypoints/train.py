@@ -65,7 +65,7 @@ def format_dataset(dataset: DatasetDict, tokenizer, training_method: str):
         amr_graphs = examples["amr_graph"]
         texts = []
 
-        for sentence, amr_graph in enumerate(sentences, amr_graphs):
+        for sentence, amr_graph in zip(sentences, amr_graphs):
             chat_temp = [
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": sentence},

@@ -211,7 +211,10 @@ def create_trainer(wrapped_model: LLMBaseModel, dataset: DatasetDict, config: Do
             train_dataset=formatted_dataset["train"],
             eval_dataset=formatted_dataset["validation"],
             peft_config=peft_config,
-            reward_funcs=[reward_amr_correctness, reward_smatch, reward_propbank_correctness],
+            reward_funcs=[reward_amr_correctness,
+                          reward_smatch,
+                          reward_propbank_correctness,
+                          reward_and_or_connetion],
             args=get_training_config(config, training_method),
         )
     else:

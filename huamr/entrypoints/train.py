@@ -25,7 +25,6 @@ HF_TOKEN = os.getenv('HF_TOKEN')
 
 ilp = solvers.ILP()
 measure = Smatchpp(alignmentsolver=ilp)
-amr_validator: Optional[AMRValidator] = None
 
 
 def load_synthetic_data(file, synthetic_data_amount) -> Optional[pd.DataFrame]:
@@ -226,6 +225,8 @@ def create_trainer(wrapped_model: LLMBaseModel, dataset: DatasetDict, config: Do
 @click.argument('training_method', default='sft', type=click.Choice(['sft', 'grpo']))
 def main(config_path, training_method):
     config = get_config_from_yaml(config_path)
+
+    global amr_validator
     amr_validator = AMRValidator(config.frame_arg_descr)
 
     wrapped_model = ModelFactory.get_model(config, HF_TOKEN, do_train=True)

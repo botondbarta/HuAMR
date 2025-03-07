@@ -15,6 +15,7 @@ from trl.trainer import SFTTrainer, SFTConfig, GRPOTrainer, GRPOConfig
 from huamr.data.amr3 import AMR3Dataset
 from huamr.llm_models.base_model import LLMBaseModel
 from huamr.utils.amr_helper import strict_amr_check
+from huamr.utils.amr_validator import AMRValidator
 from huamr.utils.config_reader import get_config_from_yaml
 from huamr.utils.constants import SYSTEM_PROMPT
 from huamr.utils.langtype import LangType
@@ -24,6 +25,7 @@ HF_TOKEN = os.getenv('HF_TOKEN')
 
 ilp = solvers.ILP()
 measure = Smatchpp(alignmentsolver=ilp)
+amr_validator: Optional[AMRValidator] = None
 
 
 def load_synthetic_data(file, synthetic_data_amount) -> Optional[pd.DataFrame]:
@@ -115,7 +117,7 @@ def get_training_config(config: DotMap, training_method: str) -> SFTConfig | GRP
         "warmup_steps": config.warmup_steps,
         "group_by_length": config.group_by_length,
         "lr_scheduler_type": "linear",
-        "report_to": None,
+        "report_to": "wandb",
     }
 
     if training_method == "sft":
@@ -143,9 +145,7 @@ def calc_smatch_for_grpo(comp_graph: str, ref_graph: str) -> float:
     try:
         score = measure.score_pair(comp_graph, ref_graph)['main']['F1'] / 100
 
-        if score <= 0.5:
-            return 0.0
-        return ((score - 0.5) / 0.1) * 0.2
+        return score ** 2
     except Exception:
         return 0.0
 
@@ -157,6 +157,28 @@ def reward_smatch(completions, **kwargs) -> list[float]:
         calc_smatch_for_grpo(comp, truth) if strict_amr_check(comp) else 0.0
         for comp, truth
         in zip(completions, kwargs['amr_graph'])
+    ]
+
+
+def reward_propbank_correctness(completions, **kwargs) -> list[float]:
+    completions = [completion[0]["content"] for completion in completions]
+
+    return [
+        1.0
+        if strict_amr_check(completion) and amr_validator.validate_against_propbank_frames(completion)
+        else 0.0
+        for completion in completions
+    ]
+
+
+def reward_and_or_connetion(completions, **kwargs) -> list[float]:
+    completions = [completion[0]["content"] for completion in completions]
+
+    return [
+        1.0
+        if strict_amr_check(completion) and amr_validator.validate_and_or_connection(completion)
+        else 0.0
+        for completion in completions
     ]
 
 
@@ -189,7 +211,7 @@ def create_trainer(wrapped_model: LLMBaseModel, dataset: DatasetDict, config: Do
             train_dataset=formatted_dataset["train"],
             eval_dataset=formatted_dataset["validation"],
             peft_config=peft_config,
-            reward_funcs=[reward_amr_correctness, reward_smatch],
+            reward_funcs=[reward_amr_correctness, reward_smatch, reward_propbank_correctness],
             args=get_training_config(config, training_method),
         )
     else:
@@ -201,6 +223,7 @@ def create_trainer(wrapped_model: LLMBaseModel, dataset: DatasetDict, config: Do
 @click.argument('training_method', default='sft', type=click.Choice(['sft', 'grpo']))
 def main(config_path, training_method):
     config = get_config_from_yaml(config_path)
+    amr_validator = AMRValidator(config.frame_arg_descr)
 
     wrapped_model = ModelFactory.get_model(config, HF_TOKEN, do_train=True)
 

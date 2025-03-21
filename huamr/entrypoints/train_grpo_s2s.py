@@ -1,9 +1,13 @@
 import os
+import re
 import shutil
 from pathlib import Path
 
 import click
 import pandas as pd
+import penman
+from amr import AMR
+from amrlib.models.parse_xfm.penman_serializer import PenmanDeSerializer
 from datasets import DatasetDict, Dataset
 from dotmap import DotMap
 from peft import LoraConfig, TaskType
@@ -13,9 +17,9 @@ from transformers import IntervalStrategy, AutoTokenizer, AutoModelForSeq2SeqLM
 from trl.trainer import GRPOTrainer, GRPOConfig
 
 from huamr.data.amr3 import AMR3Dataset
-from huamr.entrypoints.train import calc_smatch_for_grpo
+from huamr.entrypoints.evaluate import count_unmatched_parentheses
 from huamr.llm_models.base_model import LLMBaseModel
-from huamr.utils.amr_helper import strict_amr_check
+from huamr.utils.amr_helper import remove_wiki_from_graph
 from huamr.utils.amr_validator import AMRValidator
 from huamr.utils.config_reader import get_config_from_yaml
 from huamr.utils.langtype import LangType
@@ -24,6 +28,38 @@ HF_TOKEN = os.getenv('HF_TOKEN')
 
 ilp = solvers.ILP()
 measure = Smatchpp(alignmentsolver=ilp)
+
+
+def xfm_is_amr_valid(amr: str) -> bool:
+    try:
+        amr = amr.replace('\n', ' ').strip()
+
+        if amr.count('(') == 0 or amr.count(')') == 0:
+            return False
+        if amr[0] != '(' or amr[-1] != ')':
+            return False
+
+        if max(count_unmatched_parentheses(amr)) != 0:
+            return False
+
+        amr = PenmanDeSerializer(amr).get_graph_string()
+        if amr is None:
+            return False
+
+        graph = penman.decode(amr)
+        encoded = penman.encode(remove_wiki_from_graph(graph))
+
+        pattern = r'\/ [\w-]+ \/'
+        if bool(re.search(pattern, amr)) or bool(re.search(pattern, encoded)):
+            return False
+
+        theamr = AMR.parse_AMR_line(amr)
+        if theamr is None:
+            return False
+
+        return True
+    except Exception:
+        return False
 
 
 def load_dataset(config: DotMap) -> DatasetDict:
@@ -98,9 +134,19 @@ def get_training_config(config: DotMap) -> GRPOConfig:
     )
 
 
+def calc_smatch_for_grpo(comp_graph: str, ref_graph: str) -> float:
+    try:
+        comp_graph = PenmanDeSerializer(comp_graph).get_graph_string()
+        score = measure.score_pair(comp_graph, ref_graph)['main']['F1'] / 100
+
+        return score ** 2
+    except Exception:
+        return 0.0
+
+
 def reward_smatch(completions, **kwargs) -> list[float]:
     return [
-        calc_smatch_for_grpo(comp, truth) if strict_amr_check(comp) else 0.0
+        calc_smatch_for_grpo(comp, truth) if xfm_is_amr_valid(comp) else 0.0
         for comp, truth
         in zip(completions, kwargs['amr_graph'])
     ]
@@ -109,7 +155,7 @@ def reward_smatch(completions, **kwargs) -> list[float]:
 def reward_propbank_correctness(completions) -> list[float]:
     return [
         1.0
-        if strict_amr_check(completion) and amr_validator.validate_against_propbank_frames(completion)
+        if xfm_is_amr_valid(completion) and amr_validator.validate_against_propbank_frames(completion)
         else 0.0
         for completion in completions
     ]
@@ -118,14 +164,14 @@ def reward_propbank_correctness(completions) -> list[float]:
 def reward_and_or_connection(completions) -> list[float]:
     return [
         1.0
-        if strict_amr_check(completion) and amr_validator.validate_and_or_connection(completion)
+        if xfm_is_amr_valid(completion) and amr_validator.validate_and_or_connection(completion)
         else 0.0
         for completion in completions
     ]
 
 
 def reward_amr_correctness(completions) -> list[float]:
-    return [1.0 if strict_amr_check(completion) else 0.0 for completion in completions]
+    return [1.0 if xfm_is_amr_valid(completion) else 0.0 for completion in completions]
 
 
 def create_trainer(wrapped_model: LLMBaseModel, dataset: DatasetDict, config: DotMap) -> GRPOTrainer:

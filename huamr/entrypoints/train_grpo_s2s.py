@@ -151,7 +151,7 @@ def reward_smatch(completions, **kwargs) -> list[float]:
     ]
 
 
-def reward_propbank_correctness(completions) -> list[float]:
+def reward_propbank_correctness(completions, **kwargs) -> list[float]:
     return [
         1.0
         if xfm_is_amr_valid(completion) and amr_validator.validate_against_propbank_frames(completion)
@@ -160,7 +160,7 @@ def reward_propbank_correctness(completions) -> list[float]:
     ]
 
 
-def reward_and_or_connection(completions) -> list[float]:
+def reward_and_or_connection(completions, **kwargs) -> list[float]:
     return [
         1.0
         if xfm_is_amr_valid(completion) and amr_validator.validate_and_or_connection(completion)
@@ -169,7 +169,7 @@ def reward_and_or_connection(completions) -> list[float]:
     ]
 
 
-def reward_amr_correctness(completions) -> list[float]:
+def reward_amr_correctness(completions, **kwargs) -> list[float]:
     return [1.0 if xfm_is_amr_valid(completion) else 0.0 for completion in completions]
 
 

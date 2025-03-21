@@ -188,7 +188,7 @@ def main(config_path):
     dataset = load_dataset(config)
     formatted_dataset = format_dataset(dataset)
 
-    return GRPOTrainer(
+    trainer = GRPOTrainer(
         model=model,
         processing_class=tokenizer,
         train_dataset=formatted_dataset["train"],

@@ -18,7 +18,6 @@ from trl.trainer import GRPOTrainer, GRPOConfig
 
 from huamr.data.amr3 import AMR3Dataset
 from huamr.entrypoints.evaluate import count_unmatched_parentheses
-from huamr.llm_models.base_model import LLMBaseModel
 from huamr.utils.amr_helper import remove_wiki_from_graph
 from huamr.utils.amr_validator import AMRValidator
 from huamr.utils.config_reader import get_config_from_yaml
@@ -172,26 +171,6 @@ def reward_and_or_connection(completions) -> list[float]:
 
 def reward_amr_correctness(completions) -> list[float]:
     return [1.0 if xfm_is_amr_valid(completion) else 0.0 for completion in completions]
-
-
-def create_trainer(wrapped_model: LLMBaseModel, dataset: DatasetDict, config: DotMap) -> GRPOTrainer:
-    peft_config = get_peft_config(config) if config.use_lora else None
-    model = wrapped_model.get_model()
-    tokenizer = wrapped_model.get_tokenizer()
-    formatted_dataset = format_dataset(dataset)
-
-    return GRPOTrainer(
-        model=model,
-        processing_class=tokenizer,
-        train_dataset=formatted_dataset["train"],
-        eval_dataset=formatted_dataset["validation"],
-        peft_config=peft_config,
-        reward_funcs=[reward_amr_correctness,
-                      reward_smatch,
-                      reward_propbank_correctness,
-                      reward_and_or_connection],
-        args=get_training_config(config),
-    )
 
 
 @click.command()

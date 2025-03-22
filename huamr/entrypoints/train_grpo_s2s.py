@@ -38,7 +38,7 @@ def xfm_is_amr_valid(amr: str) -> bool:
         if amr[0] != '(' or amr[-1] != ')':
             return False
 
-        if max(count_unmatched_parentheses(amr)) != 0:
+        if count_unmatched_parentheses(amr) != 0:
             return False
 
         amr = PenmanDeSerializer(amr).get_graph_string()

@@ -7,6 +7,7 @@ import click
 import pandas as pd
 import torch
 import wandb
+from amrlib.models.parse_xfm.penman_serializer import PenmanDeSerializer
 from datasets import Dataset, DatasetDict, load_dataset
 from dotmap import DotMap
 from huamr.data.amr3 import AMR3Dataset
@@ -135,8 +136,6 @@ def rouge_reward(predictions: list[str], references: list[str]) -> float:
 
 def calc_smatch_for_grpo(comp_graph: str, ref_graph: str) -> float:
     try:
-        comp_graph = PenmanDeSerializer(comp_graph).get_graph_string()
-        ref_graph = PenmanDeSerializer(ref_graph).get_graph_string()
         score = measure.score_pair(comp_graph, ref_graph)['main']['F1'] / 100
 
         return score ** 2
@@ -171,10 +170,11 @@ def compute_rewards(
         if is_valid:
             reward += 1.0
 
-            smatch = calc_smatch_for_grpo(gen, ref)
+            graph_str = PenmanDeSerializer(gen).get_graph_string()
+
+            smatch = calc_smatch_for_grpo(graph_str, ref)
             reward += smatch
 
-            graph_str = PenmanDeSerializer(gen).get_graph_string()
             if amr_validator.validate_against_propbank_frames(graph_str):
                 reward += 1.0
 

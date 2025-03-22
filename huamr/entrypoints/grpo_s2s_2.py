@@ -13,6 +13,7 @@ from dotmap import DotMap
 from huamr.data.amr3 import AMR3Dataset
 from huamr.entrypoints.train import calc_smatch_for_grpo
 from huamr.entrypoints.train_grpo_s2s import xfm_is_amr_valid
+from huamr.utils.amr_validator import AMRValidator
 from huamr.utils.config_reader import get_config_from_yaml
 from huamr.utils.langtype import LangType
 from torch import FloatTensor, LongTensor

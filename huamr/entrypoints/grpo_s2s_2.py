@@ -3,6 +3,7 @@ from copy import deepcopy
 from dataclasses import dataclass
 from typing import Tuple
 
+import click
 import torch
 import wandb
 from datasets import Dataset, DatasetDict, load_dataset

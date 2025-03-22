@@ -3,7 +3,6 @@ from copy import deepcopy
 from dataclasses import dataclass
 from typing import Tuple
 
-import nltk
 import torch
 import wandb
 from datasets import Dataset, DatasetDict, load_dataset
@@ -127,36 +126,6 @@ def rouge_reward(predictions: list[str], references: list[str]) -> float:
 
     scores = rouge_eval.compute(predictions=predictions, references=references)
     return (scores["rouge1"] + scores["rouge2"] + scores["rougeLsum"]) / 3.0
-
-
-def postprocess_text(
-        preds: list[str], labels: list[str]
-) -> Tuple[list[str], list[str]]:
-    """
-    Post-processes the predicted and label texts,
-    formatting them for ROUGE-L summarization evaluation.
-
-    Args:
-        preds (list[str]): List of predicted text strings.
-        labels (list[str]): List of label text strings.
-
-    Returns:
-        Tuple[list[str], list[str]]: A tuple containing two lists:
-            - The first list contains the post-processed predicted texts.
-            - The second list contains the post-processed label texts.
-    """
-
-    preds = [pred.strip() for pred in preds]
-    labels = [label.strip() for label in labels]
-
-    # rougeLSum expects newline after each sentence
-    preds = [
-        "\n".join(nltk.sent_tokenize(pred.replace("<n>", " ")))
-        for pred in preds
-    ]
-    labels = ["\n".join(nltk.sent_tokenize(label)) for label in labels]
-
-    return preds, labels
 
 
 def calc_smatch_for_grpo(comp_graph: str, ref_graph: str) -> float:

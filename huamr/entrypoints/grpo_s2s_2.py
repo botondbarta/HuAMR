@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Tuple
 
 import click
+import pandas as pd
 import torch
 import wandb
 from datasets import Dataset, DatasetDict, load_dataset

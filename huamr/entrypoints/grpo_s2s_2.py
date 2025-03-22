@@ -6,6 +6,7 @@ from typing import Tuple
 import torch
 import wandb
 from datasets import Dataset, DatasetDict, load_dataset
+from dotmap import DotMap
 from huamr.data.amr3 import AMR3Dataset
 from huamr.entrypoints.train import calc_smatch_for_grpo
 from huamr.utils.config_reader import get_config_from_yaml

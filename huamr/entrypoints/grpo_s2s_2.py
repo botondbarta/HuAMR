@@ -591,6 +591,9 @@ def train(
 def main(config_path):
     config = get_config_from_yaml(config_path)
 
+    global amr_validator
+    amr_validator = AMRValidator(config.frame_arg_descr)
+
     model_name = '/mnt/idms/home/botondbarta/models/model_parse_xfm_bart_large-v0_1_0'
     model = load_model(model_name)
     tokenizer = load_tokenizer('facebook/bart-large')

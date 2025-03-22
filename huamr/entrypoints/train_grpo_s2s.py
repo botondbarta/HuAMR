@@ -154,7 +154,8 @@ def reward_smatch(completions, **kwargs) -> list[float]:
 def reward_propbank_correctness(completions, **kwargs) -> list[float]:
     return [
         1.0
-        if xfm_is_amr_valid(completion) and amr_validator.validate_against_propbank_frames(completion)
+        if xfm_is_amr_valid(completion) and amr_validator.validate_against_propbank_frames(
+            PenmanDeSerializer(completion).get_graph_string())
         else 0.0
         for completion in completions
     ]
@@ -163,7 +164,7 @@ def reward_propbank_correctness(completions, **kwargs) -> list[float]:
 def reward_and_or_connection(completions, **kwargs) -> list[float]:
     return [
         1.0
-        if xfm_is_amr_valid(completion) and amr_validator.validate_and_or_connection(completion)
+        if xfm_is_amr_valid(completion) and amr_validator.validate_and_or_connection(PenmanDeSerializer(completion).get_graph_string())
         else 0.0
         for completion in completions
     ]

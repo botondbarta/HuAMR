@@ -11,6 +11,7 @@ from dotmap import DotMap
 from huamr.data.amr3 import AMR3Dataset
 from huamr.entrypoints.train import calc_smatch_for_grpo
 from huamr.utils.config_reader import get_config_from_yaml
+from huamr.utils.langtype import LangType
 from torch import FloatTensor, LongTensor
 from torch.nn.utils import clip_grad_norm_
 from torch.optim import AdamW

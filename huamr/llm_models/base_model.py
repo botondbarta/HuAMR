@@ -57,6 +57,33 @@ class LLMBaseModel(ABC):
         outputs = self.model.generate(**inputs, generation_config=generation_config)
         return self.tokenizer.batch_decode(outputs.sequences, skip_special_tokens=True,
                                            clean_up_tokenization_spaces=True)
+        
+    def fewshot_inference(self, batch_prompts) -> list[str]:
+        prompts = []
+        for examples, target_sentence in batch_prompts:
+
+            prompt = "### Instruction\n" \
+                     "Provide the AMR graph for the following sentence. Ensure that the graph captures " \
+                     "the main concepts, the relationships between them, and any additional information " \
+                     "that is important for understanding the meaning of the sentence. Use standard AMR " \
+                     "notation, including concepts, roles, and relationships.\n\n"
+            
+            for example in examples:
+                prompt += f"### Sentence\n{example['sentence']}\n\n### AMR Graph\n{example['amr_graph']}\n\n"
+            
+            prompt += f"### Sentence\n{target_sentence}\n\n### AMR Graph\n"
+            prompts.append(prompt)
+
+        inputs = self.tokenizer(prompts, padding=True, return_tensors="pt").to("cuda")
+        
+        generation_config = GenerationConfig(
+            return_dict_in_generate=True,
+            eos_token_id=self.tokenizer.eos_token_id,
+            pad_token_id=self.tokenizer.pad_token_id,
+            max_new_tokens=self.config.generate_max_length,
+        )
+        outputs = self.model.generate(**inputs, generation_config=generation_config)
+        return self.tokenizer.batch_decode(outputs.sequences, skip_special_tokens=True, clean_up_tokenization_spaces=True)
 
     def set_special_tokens(self, model_name, tokenizer):
         pass

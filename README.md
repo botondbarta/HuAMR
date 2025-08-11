@@ -3,7 +3,7 @@
 You can access trained models and datasets used in this project from the following links:
 
 - [mT5-large](https://huggingface.co/SZTAKI-HLT/mT5-large-HuAMR) trained on translated AMR 3.0 and HuAMR.
-- [Link to datasets]([#](https://huggingface.co/datasets/SZTAKI-HLT/HuAMR))
+- [Link to datasets](https://huggingface.co/datasets/SZTAKI-HLT/HuAMR)
 
 ## Setup
 
